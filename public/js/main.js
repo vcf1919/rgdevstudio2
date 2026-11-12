@@ -680,13 +680,12 @@
     var cursor = $('.cursor');
     if (cursor) {
       root.classList.add('has-cursor');
-      var cx = gsap.quickTo(cursor, 'x', { duration: 0.28, ease: 'power3.out' });
-      var cy = gsap.quickTo(cursor, 'y', { duration: 0.28, ease: 'power3.out' });
+      // El punto va pegado al ratón (sin retraso): se coloca en cuanto llega el movimiento
       var shown = false;
       window.addEventListener('pointermove', function (e) {
         if (e.pointerType && e.pointerType !== 'mouse') return;
-        if (!shown) { shown = true; gsap.set(cursor, { x: e.clientX, y: e.clientY }); gsap.to(cursor, { opacity: 1, duration: 0.3 }); }
-        cx(e.clientX); cy(e.clientY);
+        cursor.style.transform = 'translate3d(' + e.clientX + 'px,' + e.clientY + 'px,0)';
+        if (!shown) { shown = true; gsap.to(cursor, { opacity: 1, duration: 0.2 }); }
       }, { passive: true });
       document.addEventListener('pointerover', function (e) {
         var t = e.target;

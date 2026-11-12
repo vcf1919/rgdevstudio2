@@ -18,6 +18,7 @@
   var TRAVEL = '(min-width: 1024px) and (min-height: 600px) and (prefers-reduced-motion: no-preference)';
   var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var lenis = null;
+  var beforeJump = null; // en móvil, monta la escena de Trabajos antes de un salto para que la altura sea la final
 
   if (!animate) root.classList.remove('js', 'is-travel');
   window.__rgReady = true;
@@ -31,8 +32,9 @@
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
 
   function scrollToTarget(target, immediate) {
+    if (beforeJump) beforeJump();
     var y = target.id === 'inicio' ? 0 : target.getBoundingClientRect().top + window.scrollY - (target.id === 'contacto' ? 0 : headerH() - 1);
-    if (lenis) lenis.scrollTo(y, { immediate: !!immediate, duration: 1.4 });
+    if (lenis) { lenis.resize(); lenis.scrollTo(y, { immediate: !!immediate, duration: 1.4 }); }
     else window.scrollTo({ top: y, behavior: reduced || immediate ? 'auto' : 'smooth' });
   }
 
@@ -459,21 +461,25 @@
     };
   });
 
-  /* ============ MÓVIL / TABLET: móvil 3D en su sitio, sin fijar la sección ============ */
+  /* ============ MÓVIL / TABLET ============
+     Hero: el móvil asoma inclinado en la primera pantalla y la cámara entra en su pantalla.
+     Trabajos: escena fijada a pantalla completa con el móvil 3D (se monta al acercarse). */
   mm.add('not all and ' + TRAVEL, function (context) {
+    root.classList.add('has-reel');
     var slot = $('.hero-slot');
     var source = $('.project .phone');
     var heroPhone = source.cloneNode(true);
     heroPhone.removeAttribute('role'); heroPhone.removeAttribute('aria-label');
     slot.appendChild(heroPhone);
 
-    // Entrada: el móvil llega girando desde el canto
+    // Entrada: el móvil sube girando desde el canto
     if (!introDone) {
       gsap.fromTo(heroPhone,
-        { rotateY: -80, rotateX: 18, y: 110, autoAlpha: 0 },
-        { rotateY: 0, rotateX: 0, y: 0, autoAlpha: 1, duration: 1.8, ease: 'expo.out', delay: 0.4 });
+        { rotateY: -80, rotateX: 18, y: 160, autoAlpha: 0 },
+        { rotateY: 0, rotateX: 0, y: 0, autoAlpha: 1, duration: 1.8, ease: 'expo.out', delay: 0.35 });
     }
-    // Zoom: el móvil se queda fijo, se pone de frente y la cámara se mete en su pantalla
+
+    // Zoom: el móvil se queda fijo, se endereza y la cámara se mete en su pantalla
     var heroScreen = $('.phone-screen', heroPhone);
     var zoomTo = function () {
       return Math.max(window.innerWidth / heroScreen.offsetWidth, window.innerHeight / heroScreen.offsetHeight) * 1.12;
@@ -481,80 +487,132 @@
     var zoom = gsap.timeline({
       scrollTrigger: { trigger: '.hero-visual', start: 'center center', end: '+=120%', pin: true, scrub: 0.6, invalidateOnRefresh: true }
     });
-    zoom.to(slot, { rotateY: -18, rotateX: 9, scale: 1.04, duration: 0.25, ease: 'power1.out' })
-      .to(slot, { rotateY: 0, rotateX: 0, scale: zoomTo, duration: 0.55, ease: 'power2.in' })
+    zoom.fromTo(slot, { rotateY: -22, rotateX: 14, rotateZ: 4, scale: 1 },
+                      { rotateY: 0, rotateX: 0, rotateZ: 0, scale: 1.03, duration: 0.25, ease: 'power1.out' })
+      .to(slot, { scale: zoomTo, duration: 0.55, ease: 'power2.in' })
       .to(slot, { autoAlpha: 0, duration: 0.2, ease: 'none' });
 
-    // Las pantallas se mueven solas solo mientras se ven (y, en Trabajos, cuando la maqueta está montada)
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        var t = en.target;
-        t._vis = en.isIntersecting;
-        if (t._sync) t._sync(); else t.classList.toggle('is-live', t._vis);
-      });
-    }, { threshold: 0.35 });
-    var phones = $$('.project .phone').concat([heroPhone]);
-
-    var glosses = [], sets = [];
-    // Cada maqueta de Trabajos se prepara al acercarse a la pantalla, no durante la carga
-    $$('.project').forEach(function (p) {
-      gsap.from($$('[data-p]', p), { y: 28, autoAlpha: 0, duration: 0.9, stagger: 0.06, scrollTrigger: { trigger: p, start: 'top 78%', once: true } });
-      ST.create({
-        trigger: p, start: function () { return 'top bottom+=' + Math.round(window.innerHeight * 1.5); }, end: 'max', once: true,
-        onEnter: function () { context.add(function () { setupProject(p); }); }
-      });
-    });
-    function setupProject(p) {
-      var visual = $('.project-visual', p);
-      var phone = $('.phone', p);
-      var L = buildLayers($('.screen', phone), $('.phone-front', phone));
-      sets.push(L);
-
-      // Reflejo de cristal que cruza la maqueta
-      var gloss = document.createElement('span');
-      gloss.className = 'gloss';
-      $('.phone-screen', phone).appendChild(gloss);
-      glosses.push(gloss);
-
-      // Despiece: mientras la maqueta gira hacia ti, sus bloques flotan separados y se van colocando
-      var exploded = true;
-      phone._sync = function () {
-        gsap.set(L.origs, { opacity: exploded ? 0 : 1 });
-        gsap.set(L.clones, { opacity: exploded ? 1 : 0 });
-        phone.classList.toggle('is-live', !!phone._vis && !exploded);
-      };
-      var setExploded = function (v) { if (v !== exploded) { exploded = v; phone._sync(); } };
-      phone._sync();
-      var step = function () { return parseFloat(getComputedStyle(phone).fontSize) * 7.5; };
-
-      var build = gsap.timeline({
-        scrollTrigger: {
-          trigger: visual, start: 'top 92%', end: 'center 48%', scrub: 0.6, invalidateOnRefresh: true,
-          onUpdate: function (self) { setExploded(self.progress < 0.97); },
-          onRefresh: function (self) { setExploded(self.progress < 0.97); }
-        }
-      });
-      build.fromTo(phone, { rotateY: -42, rotateX: 18, scale: 0.84, y: 50 }, { rotateY: 0, rotateX: 0, scale: 1, y: 0, ease: 'none', duration: 1 }, 0)
-        .fromTo(L.clones, { z: function (k) { return (k + 1) * step(); } }, { z: 0, ease: 'power2.in', duration: 1 }, 0);
-
-      gsap.fromTo(gloss, { xPercent: -130 }, { xPercent: 130, ease: 'none',
-        scrollTrigger: { trigger: visual, start: 'top 80%', end: 'bottom 30%', scrub: 0.6 } });
-
-      io.observe(phone);
-    }
+      entries.forEach(function (en) { en.target.classList.toggle('is-live', en.isIntersecting); });
+    }, { threshold: 0.2 });
     io.observe(heroPhone);
 
-    var placeAll = function () { sets.forEach(function (L) { L.place(); }); };
+    $$('.project').forEach(function (p) {
+      gsap.from($$('[data-p]', p), { y: 28, autoAlpha: 0, duration: 0.9, stagger: 0.06, scrollTrigger: { trigger: p, start: 'top 82%', once: true } });
+    });
+
+    /* --- Escena de Trabajos --- */
+    var works = $('.works'), pinWrap = $('.works-pin');
+    var projects = $$('.project');
+    var names = projects.map(function (p) { return $('.project-name', p).textContent; });
+    var tagLines = projects.map(function (p) { return $$('.project-tags span', p).map(function (s) { return s.textContent; }).join(' · '); });
+    var N = projects.length;
+    var reel = document.createElement('div');
+    reel.className = 'reel';
+    reel.setAttribute('aria-hidden', 'true'); // el contenido real está en las tarjetas de debajo
+    reel.innerHTML =
+      '<i class="reel-tint reel-tint--cafe"></i><i class="reel-tint reel-tint--moda"></i>' +
+      '<p class="reel-count"><span class="reel-count-mask"><span class="reel-count-inner">' +
+        names.map(function (_, i) { return '<span>0' + (i + 1) + '</span>'; }).join('') +
+      '</span></span><span>/ 0' + N + '</span></p>' +
+      '<p class="reel-kicker">Trabajos</p>' +
+      '<div class="reel-shadow"></div><div class="reel-stage"></div>' +
+      '<div class="reel-caption">' + names.map(function (n, i) {
+        return '<div class="reel-item"><p class="reel-name"><span></span></p><p class="reel-tags"><span></span></p></div>';
+      }).join('') + '</div>' +
+      '<div class="reel-progress"><i></i></div>';
+    $$('.reel-item', reel).forEach(function (it, i) {
+      $('.reel-name span', it).textContent = names[i];
+      $('.reel-tags span', it).textContent = tagLines[i];
+    });
+    works.insertBefore(reel, pinWrap);
+
+    var layers = [];
+    var placeAll = function () { layers.forEach(function (L) { L.place(); }); };
     ST.addEventListener('refresh', placeAll);
+
+    var built = false;
+    beforeJump = function () { if (!built) context.add(buildReel); };
+    ST.create({
+      trigger: reel, start: function () { return 'top bottom+=' + Math.round(window.innerHeight); }, end: 'max', once: true,
+      onEnter: function () { requestAnimationFrame(function () { context.add(buildReel); }); }
+    });
+
+    function buildReel() {
+      if (built || !reel.isConnected) return;
+      built = true;
+      var phone = buildStagePhone();
+      $('.reel-stage', reel).appendChild(phone);
+      var screens = $$('.screen', phone);
+      var scrollers = screens.map(function (s) { return $('.screen-scroll', s); });
+      var front = $('.phone-front', phone);
+      layers = screens.map(function (s) { return buildLayers(s, front); });
+      var tints = $$('.reel-tint', reel);
+      var items = $$('.reel-item', reel);
+      var countInner = $('.reel-count-inner', reel);
+      var bar = $('.reel-progress i', reel);
+      var ru = function () { return parseFloat(getComputedStyle(phone).fontSize); };
+
+      screens.forEach(function (s, i) { gsap.set(s, { yPercent: i ? 100 : 0 }); });
+      items.forEach(function (it, i) { if (i) gsap.set($$('span', it), { yPercent: 140 }); });
+      gsap.set(phone, { rotateY: -22, rotateX: 10 });
+
+      var tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } });
+      tl.to({}, { duration: 0.15 });
+      screens.forEach(function (_, i) {
+        var base = -360 * i, L = layers[i], at = 'x' + i;
+        // Despiece: las capas de la web flotan delante del móvil y se vuelven a colocar
+        tl.addLabel(at)
+          .set(L.origs, { opacity: 0 }, at)
+          .set(L.clones, { opacity: 1 }, at)
+          .fromTo(L.clones, { z: 0 }, { z: function (k) { return (k + 1) * ru() * 7; }, duration: 0.45, stagger: 0.03, ease: 'power2.out' }, at)
+          .to(phone, { rotateY: base - 40, rotateX: 20, duration: 0.45, ease: 'power2.out' }, at)
+          .to(L.clones, { z: 0, duration: 0.45, stagger: { each: 0.03, from: 'end' } }, at + '+=0.6')
+          .to(phone, { rotateY: base - 6, rotateX: 4, duration: 0.45 }, at + '+=0.6')
+          .set(L.clones, { opacity: 0 }, at + '+=1.12')
+          .set(L.origs, { opacity: 1 }, at + '+=1.12')
+          // La web del cliente se recorre con el scroll
+          .to(scrollers[i], {
+            y: function () { return -Math.max(0, scrollers[i].offsetHeight - screens[i].offsetHeight); },
+            duration: 0.8, ease: 'power1.inOut'
+          }, at + '+=1.15')
+          .to(phone, { rotateY: base + 10, rotateX: 2, duration: 0.8, ease: 'none' }, at + '+=1.15');
+
+        if (i < N - 1) {
+          // Cambio de proyecto: el móvil gira sobre sí mismo y vuelve con la web del siguiente cliente
+          var t = 't' + i;
+          tl.addLabel(t)
+            .to($$('span', items[i]), { yPercent: -140, duration: 0.35, stagger: 0.05, ease: 'power2.in' }, t)
+            .to(phone, { rotateY: base - 382, rotateX: 10, duration: 0.9 }, t)
+            .to(phone, { scale: 0.88, duration: 0.45, ease: 'power2.out' }, t)
+            .to(phone, { scale: 1, duration: 0.45, ease: 'power2.in' }, t + '+=0.45')
+            .to(tints[i], { opacity: 1, duration: 0.7, ease: 'none' }, t + '+=0.1')
+            .set(screens[i + 1], { yPercent: 0 }, t + '+=0.45')
+            .set(screens[i], { yPercent: -100 }, t + '+=0.45')
+            .to(countInner, { yPercent: -100 * (i + 1) / N, duration: 0.5 }, t + '+=0.2')
+            .fromTo($$('span', items[i + 1]), { yPercent: 140 }, { yPercent: 0, duration: 0.45, stagger: 0.06, ease: 'power3.out' }, t + '+=0.6');
+        }
+      });
+      tl.to({}, { duration: 0.3 });
+      tl.to(bar, { scaleX: 1, ease: 'none', duration: tl.duration() }, 0);
+
+      ST.create({
+        trigger: reel, start: 'top top', end: '+=' + (N * 140) + '%', pin: true, scrub: 0.5,
+        animation: tl, anticipatePin: 1, invalidateOnRefresh: true
+      });
+      ST.refresh();
+    }
 
     return function () {
       io.disconnect();
       ST.removeEventListener('refresh', placeAll);
       heroPhone.remove();
-      glosses.forEach(function (g) { g.remove(); });
-      sets.forEach(function (L) { L.box.remove(); gsap.set(L.origs, { clearProps: 'opacity' }); });
-      phones.forEach(function (p) { p.classList.remove('is-live'); delete p._sync; delete p._vis; });
-      gsap.set($$('[data-p]').concat($$('.project .phone'), [slot]), { clearProps: 'all' });
+      var spacer = reel.parentNode && reel.parentNode.classList.contains('pin-spacer') ? reel.parentNode : null;
+      reel.remove();
+      if (spacer) spacer.remove();
+      root.classList.remove('has-reel');
+      beforeJump = null;
+      gsap.set($$('[data-p]').concat([slot]), { clearProps: 'all' });
     };
   });
 
@@ -571,6 +629,10 @@
       ST.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { revealTitle(el); } });
     });
     ST.refresh();
+
+    // Enlace directo a una sección (p. ej. /#contacto): recolocar con la altura definitiva
+    var hashTarget = location.hash.length > 1 && document.getElementById(location.hash.slice(1));
+    if (hashTarget) scrollToTarget(hashTarget, true);
   });
 
   /* --- Apariciones genéricas --- */

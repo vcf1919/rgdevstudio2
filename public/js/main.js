@@ -343,16 +343,21 @@
       tl.addLabel(at)
         .set(L.origs, { opacity: 0 }, at)
         .set(L.clones, { opacity: 1 }, at)
-        .fromTo(L.clones, { z: 0 }, { z: function (k) { return (k + 1) * geo.u * 5.5; }, duration: 0.45, stagger: 0.03, ease: 'power2.out' }, at)
-        .to(wob, { ry: -34, rx: 14, duration: 0.45, ease: 'power2.out' }, at)
-        .to(L.clones, { z: 0, duration: 0.45, stagger: { each: 0.03, from: 'end' }, ease: 'power2.inOut' }, at + '+=0.6')
-        .to(wob, { ry: 0, rx: 0, duration: 0.45 }, at + '+=0.6')
-        .set(L.clones, { opacity: 0 }, at + '+=1.12')
-        .set(L.origs, { opacity: 1 }, at + '+=1.12')
+        .fromTo(L.clones, { z: 0, x: 0, y: 0 }, {
+          z: function (k) { return (k + 1) * geo.u * 7; },
+          x: function (k) { return (k + 1) * geo.u * 2.6; },
+          y: function (k) { return -(k + 1) * geo.u * 1.4; },
+          duration: 0.7, stagger: 0.05, ease: 'power2.out'
+        }, at)
+        .to(wob, { ry: -38, rx: 16, duration: 0.7, ease: 'power2.out' }, at)
+        .to(L.clones, { z: 0, x: 0, y: 0, duration: 0.6, stagger: { each: 0.04, from: 'end' }, ease: 'power2.inOut' }, at + '+=1.35')
+        .to(wob, { ry: 0, rx: 0, duration: 0.6 }, at + '+=1.35')
+        .set(L.clones, { opacity: 0 }, at + '+=2.05')
+        .set(L.origs, { opacity: 1 }, at + '+=2.05')
         .to(scrollers[i], {
           y: function () { return -Math.max(0, scrollers[i].offsetHeight - screens[i].offsetHeight); },
           duration: 0.8, ease: 'power1.inOut'
-        }, at + '+=1.15');
+        }, at + '+=2.08');
     }
     function transition(i) {
       var at = 't' + i;
@@ -377,7 +382,7 @@
     tl.to(bar, { scaleX: 1, ease: 'none', duration: tl.duration() }, 0);
 
     var pinST = ST.create({
-      trigger: pin, start: 'top top', end: '+=480%', pin: true, scrub: 0.5,
+      trigger: pin, start: 'top top', end: '+=600%', pin: true, scrub: 0.5,
       animation: tl, anticipatePin: 1, invalidateOnRefresh: true
     });
 
@@ -565,18 +570,25 @@
         tl.addLabel(at)
           .set(L.origs, { opacity: 0 }, at)
           .set(L.clones, { opacity: 1 }, at)
-          .fromTo(L.clones, { z: 0 }, { z: function (k) { return (k + 1) * ru() * 7; }, duration: 0.45, stagger: 0.03, ease: 'power2.out' }, at)
-          .to(phone, { rotateY: base - 40, rotateX: 20, duration: 0.45, ease: 'power2.out' }, at)
-          .to(L.clones, { z: 0, duration: 0.45, stagger: { each: 0.03, from: 'end' } }, at + '+=0.6')
-          .to(phone, { rotateY: base - 6, rotateX: 4, duration: 0.45 }, at + '+=0.6')
-          .set(L.clones, { opacity: 0 }, at + '+=1.12')
-          .set(L.origs, { opacity: 1 }, at + '+=1.12')
+          // Las capas salen en profundidad y en diagonal (así se ven aunque el navegador aplane el 3D)
+          .fromTo(L.clones, { z: 0, x: 0, y: 0 }, {
+            z: function (k) { return (k + 1) * ru() * 6; },
+            x: function (k) { return (k + 1) * ru() * 3.6; },
+            y: function (k) { return -(k + 1) * ru() * 1.4; },
+            duration: 0.7, stagger: 0.05, ease: 'power2.out'
+          }, at)
+          .to(phone, { rotateY: base - 42, rotateX: 22, duration: 0.7, ease: 'power2.out' }, at)
+          // Pausa con la maqueta despiezada y vuelta a montar
+          .to(L.clones, { z: 0, x: 0, y: 0, duration: 0.6, stagger: { each: 0.04, from: 'end' } }, at + '+=1.35')
+          .to(phone, { rotateY: base - 6, rotateX: 4, duration: 0.6 }, at + '+=1.35')
+          .set(L.clones, { opacity: 0 }, at + '+=2.05')
+          .set(L.origs, { opacity: 1 }, at + '+=2.05')
           // La web del cliente se recorre con el scroll
           .to(scrollers[i], {
             y: function () { return -Math.max(0, scrollers[i].offsetHeight - screens[i].offsetHeight); },
             duration: 0.8, ease: 'power1.inOut'
-          }, at + '+=1.15')
-          .to(phone, { rotateY: base + 10, rotateX: 2, duration: 0.8, ease: 'none' }, at + '+=1.15');
+          }, at + '+=2.08')
+          .to(phone, { rotateY: base + 10, rotateX: 2, duration: 0.8, ease: 'none' }, at + '+=2.08');
 
         if (i < N - 1) {
           // Cambio de proyecto: el móvil gira sobre sí mismo y vuelve con la web del siguiente cliente
@@ -597,7 +609,7 @@
       tl.to(bar, { scaleX: 1, ease: 'none', duration: tl.duration() }, 0);
 
       ST.create({
-        trigger: reel, start: 'top top', end: '+=' + (N * 140) + '%', pin: true, scrub: 0.5,
+        trigger: reel, start: 'top top', end: '+=' + (N * 170) + '%', pin: true, scrub: 0.5,
         animation: tl, anticipatePin: 1, invalidateOnRefresh: true
       });
       ST.refresh();

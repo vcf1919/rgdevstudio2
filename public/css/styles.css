@@ -93,6 +93,7 @@ em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spa
 .js [data-split] { opacity: 0; }
 .line { display: block; overflow: hidden; padding: 0.06em 0.08em 0.14em; margin: -0.06em -0.08em -0.14em; }
 .line-in { display: block; will-change: transform; }
+.ch { display: inline-block; }
 
 /* ---------- Botones ---------- */
 .btn {
@@ -214,6 +215,13 @@ em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spa
   box-shadow: 0 3.4em 6em -2.4em rgba(18, 18, 20, .45), inset 0 0 0 .15em rgba(255, 255, 255, .08);
 }
 .phone-screen { position: relative; width: 100%; height: 100%; border-radius: 3.7em; overflow: hidden; background: #fff; }
+/* Despiece 3D: capas copiadas de la pantalla que se separan en profundidad */
+.phone-front { transform-style: preserve-3d; }
+.project-visual .phone { transform-style: preserve-3d; }
+.stage .phone-front > * { backface-visibility: hidden; }
+.layers { position: absolute; inset: 1em; z-index: 3; transform-style: preserve-3d; pointer-events: none; }
+.layer { position: absolute; margin: 0 !important; opacity: 0; box-sizing: border-box; }
+.layer--card { box-shadow: 0 2em 3.2em -1.4em rgba(18, 18, 20, .38); }
 .island { position: absolute; left: 50%; top: 2em; width: 8.6em; height: 2.5em; margin-left: -4.3em; border-radius: 2em; background: #0B0B0C; }
 .gloss { position: absolute; inset: 1em; border-radius: 3.7em; pointer-events: none; background: linear-gradient(115deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 32%); }
 
@@ -314,7 +322,7 @@ em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spa
 /* ==========================================================================
    Hero
    ========================================================================== */
-.hero { position: relative; padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + clamp(1.5rem, 5vh, 4rem)); padding-bottom: 3rem; }
+.hero { position: relative; overflow-x: clip;padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + clamp(1.5rem, 5vh, 4rem)); padding-bottom: 3rem; }
 .hero-grid { display: grid; gap: 3rem; }
 .hero-text { display: grid; gap: 1.7rem; justify-items: start; }
 .hero-title {

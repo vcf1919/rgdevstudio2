@@ -325,6 +325,14 @@ em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spa
 .hero-sub { font-size: var(--fs-lead); color: var(--muted); max-width: 34ch; line-height: 1.5; }
 .hero-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: .4rem; }
 .hero-visual { display: grid; justify-items: center; }
+/* Móvil y tablet: perspectiva para el giro 3D y reflejo que cruza la pantalla */
+@media (max-width: 1023px) {
+  .hero-visual, .project-visual { perspective: 1400px; }
+  .project-visual .gloss {
+    inset: 0; border-radius: 0; z-index: 2;
+    background: linear-gradient(105deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .38) 50%, rgba(255, 255, 255, 0) 70%);
+  }
+}
 @media (max-width: 479px) {
   .hero-ctas { width: 100%; }
   .hero-ctas .btn { flex: 1 1 100%; }

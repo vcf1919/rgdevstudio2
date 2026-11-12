@@ -367,15 +367,25 @@
     };
   });
 
-  /* ============ MÓVIL / TABLET: versión simplificada ============ */
+  /* ============ MÓVIL / TABLET: móvil 3D en su sitio, sin fijar la sección ============ */
   mm.add('not all and ' + TRAVEL, function () {
     var slot = $('.hero-slot');
     var source = $('.project .phone');
     var heroPhone = source.cloneNode(true);
     heroPhone.removeAttribute('role'); heroPhone.removeAttribute('aria-label');
     slot.appendChild(heroPhone);
-    if (!introDone) gsap.from(heroPhone, { y: 70, autoAlpha: 0, duration: 1.4, ease: 'expo.out', delay: 0.45 });
-    gsap.to(heroPhone, { yPercent: -6, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+
+    // Entrada: el móvil llega girando desde el canto
+    if (!introDone) {
+      gsap.fromTo(heroPhone,
+        { rotateY: -80, rotateX: 18, y: 110, autoAlpha: 0 },
+        { rotateY: 0, rotateX: 0, y: 0, autoAlpha: 1, duration: 1.8, ease: 'expo.out', delay: 0.4 });
+    }
+    // Scroll en el hero: el móvil se inclina y se aleja
+    gsap.fromTo(slot,
+      { rotateY: 0, rotateX: 0, scale: 1, yPercent: 0 },
+      { rotateY: 22, rotateX: -8, scale: 0.9, yPercent: -10, ease: 'none',
+        scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
 
     // Las pantallas solo se mueven mientras se ven
     var io = new IntersectionObserver(function (entries) {
@@ -384,16 +394,34 @@
     var phones = $$('.project .phone').concat([heroPhone]);
     phones.forEach(function (p) { io.observe(p); });
 
+    var glosses = [];
     $$('.project').forEach(function (p) {
+      var visual = $('.project-visual', p);
+      var phone = $('.phone', p);
+
+      // Reflejo de cristal que cruza la maqueta
+      var gloss = document.createElement('span');
+      gloss.className = 'gloss';
+      $('.phone-screen', phone).appendChild(gloss);
+      glosses.push(gloss);
+
+      // La maqueta gira hasta quedar de frente según haces scroll
+      gsap.fromTo(phone,
+        { rotateY: -42, rotateX: 16, scale: 0.84, y: 50 },
+        { rotateY: 0, rotateX: 0, scale: 1, y: 0, ease: 'none',
+          scrollTrigger: { trigger: visual, start: 'top 92%', end: 'center 50%', scrub: 0.6 } });
+      gsap.fromTo(gloss, { xPercent: -130 }, { xPercent: 130, ease: 'none',
+        scrollTrigger: { trigger: visual, start: 'top 80%', end: 'bottom 30%', scrub: 0.6 } });
+
       gsap.from($$('[data-p]', p), { y: 28, autoAlpha: 0, duration: 0.9, stagger: 0.06, scrollTrigger: { trigger: p, start: 'top 78%', once: true } });
-      gsap.from($('.phone', p), { y: 60, autoAlpha: 0, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: $('.project-visual', p), start: 'top 85%', once: true } });
     });
 
     return function () {
       io.disconnect();
       heroPhone.remove();
+      glosses.forEach(function (g) { g.remove(); });
       phones.forEach(function (p) { p.classList.remove('is-live'); });
-      gsap.set($$('[data-p]').concat($$('.project .phone')), { clearProps: 'all' });
+      gsap.set($$('[data-p]').concat($$('.project .phone'), [slot]), { clearProps: 'all' });
     };
   });
 

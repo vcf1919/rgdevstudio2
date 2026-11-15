@@ -591,7 +591,8 @@
 
     // Si los fps caen de forma sostenida, menos partículas (como mucho dos veces)
     if (!reduced && now > fps.graceUntil && dtMs < 250) {
-      fps.avg = fps.avg * 0.92 + dtMs * 0.08;
+      var per = software ? dtMs / CONFIG.software.fpsDivider : dtMs;   // en software se dibuja un tick de cada N
+      fps.avg = fps.avg * 0.92 + per * 0.08;
       if (fps.avg > CONFIG.fps.limitMs) {
         if (!fps.slowSince) fps.slowSince = now;
         else if (now - fps.slowSince > CONFIG.fps.window && fps.drops < CONFIG.fps.maxDrops) {

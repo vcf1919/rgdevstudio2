@@ -39,7 +39,7 @@
   --on-ink: #ECEAE4;
   --on-ink-muted: #A9A7A0;
   /* Solo en Trabajos: el fondo toma el tono de cada proyecto */
-  --tint-flor: #F3D7DD;       /* rosa tulipán */
+  --tint-argila: #EEDFD0;     /* arcilla */
   --tint-cafe: #E6D2B8;       /* café cálido */
   --tint-moda: #DAD7CF;       /* editorial de moda */
 
@@ -182,8 +182,11 @@ main { position: relative; }
   height: var(--header-h); max-width: 1400px; margin-inline: auto; padding-inline: var(--gutter);
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
-.logo { font-weight: 700; font-size: 1.12rem; letter-spacing: -0.03em; }
-.logo span { color: var(--accent-text); }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.12rem; letter-spacing: -0.03em; }
+.logo-mark { width: 34px; height: auto; color: var(--ink); transition: transform var(--dur-m) var(--ease-out); }
+.logo-word span { color: var(--accent-text); }
+@media (hover: hover) { .logo:hover .logo-mark { transform: rotate(-6deg) scale(1.06); } }
+@media (max-width: 380px) { .logo-word { display: none; } }
 .nav { display: none; }
 .nav ul { display: flex; gap: clamp(18px, 2.4vw, 34px); }
 .nav a { position: relative; font-size: 0.95rem; font-weight: 500; padding: 8px 0; display: inline-block; }
@@ -306,7 +309,7 @@ main { position: relative; }
 /* ==========================================================================
    Trabajos · fase 3
    ========================================================================== */
-.works { position: relative; background: var(--tint-flor); }
+.works { position: relative; background: var(--tint-argila); }
 .works-pin { padding-block: var(--section); }
 .works-head { display: grid; gap: 18px; margin-bottom: clamp(2rem, 1.5rem + 3vw, 4rem); }
 .projects { display: grid; gap: clamp(3.5rem, 8vw, 6rem); }
@@ -346,17 +349,6 @@ main { position: relative; }
 .works-dots { position: absolute; left: 0; right: 0; bottom: -44px; display: flex; justify-content: center; gap: 10px; }
 .works-dots li { width: 34px; height: 3px; border-radius: 2px; background: rgba(18, 18, 20, .16); overflow: hidden; }
 .works-dots li::after { content: ""; display: block; height: 100%; background: var(--ink); transform: scaleX(var(--p, 0)); transform-origin: 0 50%; }
-
-/* ==========================================================================
-   Marquee
-   ========================================================================== */
-.marquee { position: relative; overflow: hidden; padding-block: clamp(1.4rem, 3vw, 2.4rem); border-block: 1px solid var(--line); background: var(--bg); }
-.marquee-track { position: relative; z-index: 1; display: flex; width: max-content; gap: clamp(1rem, 2.5vw, 2.4rem); align-items: center; white-space: nowrap; will-change: transform; }
-.marquee-track span { font-family: var(--serif); font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1; letter-spacing: -0.03em; }
-.marquee-track span:nth-of-type(2n) { font-family: var(--italic); font-style: italic; color: var(--accent-title); }
-.marquee-track i { font-style: normal; color: var(--accent); font-size: clamp(1.4rem, 3vw, 2.6rem); }
-.js:not(.is-reduced) .marquee-track { animation: marquee 32s linear infinite; }
-@keyframes marquee { to { transform: translate3d(-50%, 0, 0); } }
 
 /* ==========================================================================
    Servicios · fase 4

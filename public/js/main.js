@@ -27,8 +27,7 @@
     launch: { load: 0.8, check: 0.7, confetti: 1.5 },
     heroParallax: 0.12,
     magnetic: 0.3,
-    marqueeBoost: 4,
-    tints: ['#F3D7DD', '#E6D2B8', '#DAD7CF']   // = --tint-flor / --tint-cafe / --tint-moda
+    tints: ['#EEDFD0', '#E6D2B8', '#DAD7CF']   // = --tint-argila / --tint-cafe / --tint-moda
   };
 
   var root = document.documentElement;
@@ -253,7 +252,7 @@
     var io = new IntersectionObserver(function (en) { if (en[0].isIntersecting) go(); }, { rootMargin: '800px 0px' });
     io.observe(slot);
     idleQ.push(go);
-    if (idleQ.length === 1) setTimeout(idleNext, 1500);
+    if (idleQ.length === 1) setTimeout(idleNext, 6000); // después de que la página ya sea interactiva
   }
   var onLazy = {};
   var DONE = { f: 1, sk: 1, s: 0, w: 1, wt: 0, d: 1 };
@@ -262,7 +261,7 @@
   function mountInline() {
   if (!cine && L) {
     inline.hero = mount($('[data-slot="hero"]'), reduced ? { f: 1, sk: 1, s: 1 } : { f: 0, sk: 0, s: 1 });
-    ['flor', 'cafe', 'moda'].forEach(function (k, i) {
+    ['argila', 'cafe', 'moda'].forEach(function (k, i) {
       mountLazy(k, $('[data-slot="' + k + '"]'), withDone({ p: i }), function (lz) { if (onLazy.project) onLazy.project(lz); });
     });
     mountLazy('launch', $('[data-slot="launch"]'), withDone({ url: 1, load: reduced ? 1 : 0, check: reduced ? 1 : 0 }), function (lz) { if (onLazy.launch) onLazy.launch(lz); });
@@ -304,7 +303,7 @@
     }
     var ws = $('.works-slot').getBoundingClientRect(), sn = $('.step-num').getBoundingClientRect(), fl2 = $('.faq-list').getBoundingClientRect();
     return {
-      hero: W / 2, build: W / 2, works: ws.left + ws.width / 2, marquee: ws.left + ws.width / 2,
+      hero: W / 2, build: W / 2, works: ws.left + ws.width / 2,
       services: sn.left + sn.width / 2, process: g * 0.6, perks: g * 0.6, about: fl2.left - 21, faq: fl2.left - 21, contact: fl2.left - 21
     }[name];
   }
@@ -349,10 +348,9 @@
         { d: vline(s.cx, s.b + 70, bx('works', box), H), a: 0.95, b: 1 }
       ];
     },
-    marquee: function (box, H) { var x = bx('marquee', box); return [{ d: 'M' + P(bx('works', box), 0) + 'L' + P(x, H), a: 0, b: 1 }]; },
     services: function (box, H) {
       var cards = $$('.service', box).map(function (c) { return relRect(c, box); });
-      var x0 = bx('marquee', box), d = 'M' + P(x0, 0);
+      var x0 = bx('works', box), d = 'M' + P(x0, 0);
       var c0 = cards[0], pad = 9;
       d += 'C' + P(x0, c0.t * 0.6) + ' ' + P(c0.l + 80, c0.t - pad - 60) + ' ' + P(c0.l + 30, c0.t - pad);
       cards.forEach(function (c, i) {
@@ -429,8 +427,7 @@
       el.setAttribute('d', def.d);
       T.svg.insertBefore(el, T.tip);
       def.el = el; def.len = el.getTotalLength();
-      def.pts = [];
-      for (var i = 0; i <= 96; i++) { var q = el.getPointAtLength(def.len * i / 96); def.pts.push([q.x, q.y]); }
+      def.pts = null; // tabla de puntos para la punta: se calcula solo cuando hace falta
       el.style.strokeDasharray = def.len + ' ' + (def.len + 2);
       return def;
     });
@@ -454,7 +451,8 @@
       if (p.end && T.onEnd) T.onEnd(t >= 0.999);
     });
     if (tipAt) {
-      var f = tipAt.t * 96, i0 = Math.floor(f), A = tipAt.pts[i0], B = tipAt.pts[Math.min(96, i0 + 1)], k = f - i0;
+      if (!tipAt.pts) { tipAt.pts = []; for (var j = 0; j <= 48; j++) { var q = tipAt.el.getPointAtLength(tipAt.len * j / 48); tipAt.pts.push([q.x, q.y]); } }
+      var f = tipAt.t * 48, i0 = Math.floor(f), A = tipAt.pts[i0], B = tipAt.pts[Math.min(48, i0 + 1)], k = f - i0;
       T.tip.setAttribute('cx', (A[0] + (B[0] - A[0]) * k).toFixed(1)); T.tip.setAttribute('cy', (A[1] + (B[1] - A[1]) * k).toFixed(1));
       if (!T.tipOn) { T.tipOn = true; T.tip.style.opacity = '1'; }
     } else if (T.tipOn !== false) { T.tipOn = false; T.tip.style.opacity = '0'; }
@@ -492,7 +490,7 @@
   // Scroll suave
   if (window.Lenis) {
     lenis = new window.Lenis({ lerp: CONFIG.lenisLerp, wheelMultiplier: 1 });
-    lenis.on('scroll', function (l) { ST.update(); onScrollUI(l.animatedScroll); marqueeVelocity(l.velocity); });
+    lenis.on('scroll', function (l) { ST.update(); onScrollUI(l.animatedScroll); });
     gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
     gsap.ticker.lagSmoothing(0);
   }
@@ -644,7 +642,7 @@
         gsap.from(lz.el, { autoAlpha: 0, y: 30, scale: .96, duration: 1, scrollTrigger: { trigger: lz.el, start: 'top 88%', once: true } });
       };
       onLazy.launch = function (lz) { launchFX(lz, '[data-slot="launch"]'); };
-      ['flor', 'cafe', 'moda'].forEach(function (k) { if (inline[k]) onLazy.project(inline[k]); });
+      ['argila', 'cafe', 'moda'].forEach(function (k) { if (inline[k]) onLazy.project(inline[k]); });
       if (inline.launch) onLazy.launch(inline.launch);
       // pasos del proceso: con la línea
     } else if (director) {
@@ -716,15 +714,6 @@
       },
       onLeaveBack: function () { gsap.to(e, { check: 0, duration: 0.3, onUpdate: function () { lz.extra({ check: e.check }); } }); }
     });
-  }
-
-  /* --- Marquee: acelera con la velocidad del scroll --- */
-  var mqAnim = null, mqRate = 1;
-  function marqueeVelocity(v) {
-    if (!mqAnim) { var t = $('.marquee-track'); mqAnim = t && t.getAnimations ? t.getAnimations()[0] : null; if (!mqAnim) return; }
-    var target = 1 + Math.min(Math.abs(v || 0) / 12, CONFIG.marqueeBoost);
-    mqRate += (target - mqRate) * 0.15;
-    mqAnim.playbackRate = mqRate;
   }
 
   /* ==================================================================

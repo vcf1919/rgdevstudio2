@@ -6,8 +6,8 @@
    Estado:
      f     marco dibujado            sk   boceto dibujado (intro)
      s     "a lápiz" (1) → limpio (0) w    cajas grises del wireframe
-     wt    la línea repasa las cajas  d    diseño: se llenan de color (Le Petit Fleur)
-     p     proyecto 0 flor · 1 café · 2 moda (barrido entre ellos)
+     wt    la línea repasa las cajas  d    diseño: se llenan de color (Taller Argila)
+     p     proyecto 0 cerámica · 1 café · 2 moda (barrido entre ellos)
      i     interacción: cursor, hover, añadir a la cesta
      url   barra de dirección         load barra de carga
      check sello «Publicado»          conf confeti (0→1, una pasada)
@@ -171,31 +171,31 @@
     return out;
   }
 
-  function projFlor(id) {
-    var ink = '#3A1F27', rose = '#C2324F';
-    var items = [['Ramo Primavera', '35 €', '#F4B8C4', '#E2486B'], ['Girasoles', '29 €', '#F9D98B', '#F2B33D'], ['Lavanda', '32 €', '#D8BCEB', '#9A5BC9'], ['Peonías', '42 €', '#FBD3C3', '#E8866A']];
-    var defs = items.map(function (it, i) { return grad(id + '-flor-g' + i, it[2], it[3]); }).join('');
-    var tulips = '<g transform="translate(598 128) scale(1.16)"><g fill="none" stroke-linecap="round">' +
-      '<path d="M64 200 C66 160 70 132 74 104" stroke="#5E7A55" stroke-width="3"/><path d="M100 200 C100 150 100 116 100 80" stroke="#5E7A55" stroke-width="3"/>' +
-      '<path d="M138 200 C136 164 132 140 128 116" stroke="#5E7A55" stroke-width="3"/><path d="M84 168 C70 150 58 150 52 156" stroke="#5E7A55" stroke-width="3"/></g>' +
-      '<path d="M74 106 C56 100 52 72 58 60 L66 72 L74 54 L82 72 L90 60 C96 72 92 100 74 106Z" fill="#E2486B"/>' +
-      '<path d="M100 82 C80 76 76 44 82 30 L91 44 L100 22 L109 44 L118 30 C124 44 120 76 100 82Z" fill="#F2B33D"/>' +
-      '<path d="M128 118 C110 112 106 84 112 72 L120 84 L128 66 L136 84 L144 72 C150 84 146 112 128 118Z" fill="#9A5BC9"/></g>';
+  function projArgila(id) {
+    var ink = '#3B2A20', clay = '#A24B2A';
+    var items = [['Taza Alba', '24 €', '#E9DCCB', '#CDB79C'], ['Plato Mar', '32 €', '#B9C7C4', '#7F9893'], ['Jarrón Duna', '58 €', '#D9A27C', '#B5683F'], ['Cuenco Teja', '28 €', '#C98563', '#94492B']];
+    var defs = items.map(function (it, i) { return grad(id + '-arg-g' + i, it[2], it[3]); }).join('') + grad(id + '-vase', '#C9805A', '#9A4A2A');
+    var still = '<ellipse cx="695" cy="338" rx="170" ry="14" fill="#D9BFA6"/>' +
+      '<path d="M660 150 C660 170 642 182 642 214 C642 262 664 300 676 336 L714 336 C726 300 748 262 748 214 C748 182 730 170 730 150 Z" fill="url(#' + id + '-vase)"/>' +
+      '<rect x="656" y="140" width="78" height="14" rx="7" fill="#B5683F"/>' +
+      '<path d="M650 230 C680 238 710 238 740 230" fill="none" stroke="#E7C3A6" stroke-width="3" opacity=".7"/>' +
+      '<path d="M540 300 C540 330 566 338 590 338 C614 338 640 330 640 300 Z" fill="#E9DCCB"/><path d="M540 300 H640" stroke="#CDB79C" stroke-width="3"/>' +
+      '<path d="M780 268 h76 v42 c0 18 -14 28 -38 28 c-24 0 -38 -10 -38 -28 Z" fill="#7F9893"/><path d="M856 280 c18 0 18 24 0 24" fill="none" stroke="#7F9893" stroke-width="6"/>';
     return {
       defs: defs,
-      svg: '<g class="pj pj-flor">' + R(0, TOP, VW, VH - TOP, 0, '#F7E3E7', ' data-b="bg"') +
-        '<g data-b="0">' + T(40, 86, 'Le Petit Fleur', { cls: 't-ital', size: 25, fill: ink }) +
-          T(560, 81, 'Ramos', { fill: ink, op: .72 }) + T(636, 81, 'Eventos', { fill: ink, op: .72 }) + T(712, 81, 'Nosotros', { fill: ink, op: .72 }) +
-          R(808, 60, 112, 32, 16, '#E2486B') + T(864, 81, 'Comprar', { a: 'middle', w: 600, fill: '#fff' }) + '</g>' +
-        '<g data-b="1">' + T(40, 164, 'Flores frescas,', { cls: 't-serif', size: 37, fill: ink, ls: -1 }) +
-          T(40, 207, 'a domicilio en el día', { cls: 't-ital', size: 40, fill: rose }) +
-          T(40, 243, 'Ramos de temporada hechos a mano en Catarroja.', { fill: '#5B3B44' }) +
-          T(40, 261, 'Entrega en Valencia y alrededores.', { fill: '#5B3B44' }) +
-          R(40, 284, 150, 42, 21, ink) + T(115, 310, 'Ver ramos', { a: 'middle', w: 600, fill: '#F7E3E7' }) + '</g>' +
-        '<g data-b="2">' + R(470, 112, 450, 250, 14, '#F0B9C5') + '<circle cx="770" cy="236" r="98" fill="#F6CDD6"/><circle cx="532" cy="300" r="46" fill="#EBA7B6"/>' + tulips +
-          T(492, 142, 'Temporada de tulipanes', { cls: 't-ital', size: 16, fill: ink }) + '</g>' +
-        '<g data-b="3">' + T(40, 378, 'Ramos de temporada', { cls: 't-serif', size: 17, fill: ink }) +
-          cards(id + '-flor', items, { card: '#FFF7F8', text: ink, price: rose }) + '</g>' +
+      svg: '<g class="pj pj-arg">' + R(0, TOP, VW, VH - TOP, 0, '#F4EAE0', ' data-b="bg"') +
+        '<g data-b="0">' + T(40, 86, 'Taller Argila', { cls: 't-ital', size: 25, fill: ink }) +
+          T(560, 81, 'Tienda', { fill: ink, op: .72 }) + T(636, 81, 'Taller', { fill: ink, op: .72 }) + T(712, 81, 'Cursos', { fill: ink, op: .72 }) +
+          R(808, 60, 112, 32, 16, clay) + T(864, 81, 'Comprar', { a: 'middle', w: 600, fill: '#fff' }) + '</g>' +
+        '<g data-b="1">' + T(40, 164, 'Cerámica hecha a mano,', { cls: 't-serif', size: 34, fill: ink, ls: -1 }) +
+          T(40, 207, 'pieza a pieza', { cls: 't-ital', size: 42, fill: clay }) +
+          T(40, 243, 'Tazas, platos y jarrones de nuestro taller.', { fill: '#6A5446' }) +
+          T(40, 261, 'Cada pieza es única. Envíos en 48 h.', { fill: '#6A5446' }) +
+          R(40, 284, 150, 42, 21, ink) + T(115, 310, 'Ver tienda', { a: 'middle', w: 600, fill: '#F4EAE0' }) + '</g>' +
+        '<g data-b="2">' + R(470, 112, 450, 250, 14, '#E8D5C2') + '<circle cx="820" cy="170" r="70" fill="#EFE0D1"/>' + still +
+          T(492, 142, 'Recién salidas del horno', { cls: 't-ital', size: 16, fill: ink }) + '</g>' +
+        '<g data-b="3">' + T(40, 378, 'Piezas de la semana', { cls: 't-serif', size: 17, fill: ink }) +
+          cards(id + '-arg', items, { card: '#FBF5EF', text: ink, price: clay }) + '</g>' +
       '</g>'
     };
   }
@@ -269,7 +269,7 @@
   function create(opts) {
     opts = opts || {};
     var id = 'lz' + (++uid);
-    var flor = projFlor(id), cafe = projCafe(id), moda = projModa(id);
+    var arg = projArgila(id), cafe = projCafe(id), moda = projModa(id);
     var R2 = rng(77);
 
     var shapeSVG = '', fillSVG = '', traceSVG = '', xSVG = '';
@@ -296,15 +296,16 @@
 
     var svg =
       '<svg class="lienzo-svg" viewBox="0 0 ' + VW + ' ' + VH + '" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">' +
-      '<defs>' + flor.defs + cafe.defs + moda.defs +
+      '<defs>' + arg.defs + cafe.defs + moda.defs +
         '<clipPath id="' + id + '-content"><path d="M0 ' + TOP + 'H' + VW + 'V' + (VH - 18) + 'Q' + VW + ' ' + VH + ' ' + (VW - 18) + ' ' + VH + 'H18Q0 ' + VH + ' 0 ' + (VH - 18) + 'Z"/></clipPath>' +
         '<clipPath id="' + id + '-w1"><rect data-wipe="1" x="0" y="' + VH + '" width="' + VW + '" height="0"/></clipPath>' +
         '<clipPath id="' + id + '-w2"><rect data-wipe="2" x="0" y="' + VH + '" width="' + VW + '" height="0"/></clipPath>' +
       '</defs>' +
       '<rect data-id="trace" x="-14" y="-14" width="' + (VW + 28) + '" height="' + (VH + 28) + '" rx="30" fill="none" stroke="' + C.accent + '" stroke-width="2.5" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/>' +
+ '<g data-id="frameWrap">' +
       '<rect data-id="paper" x="0" y="0" width="' + VW + '" height="' + VH + '" rx="18" fill="' + C.paper + '" opacity="0"/>' +
       '<g data-id="content" clip-path="url(#' + id + '-content)">' +
-        '<g data-id="design">' + flor.svg +
+        '<g data-id="design">' + arg.svg +
           '<g clip-path="url(#' + id + '-w1)" data-id="pj1">' + cafe.svg + '</g>' +
           '<g clip-path="url(#' + id + '-w2)" data-id="pj2">' + moda.svg +
             '<circle data-id="fly" r="6" fill="' + C.accent + '" opacity="0"/>' +
@@ -330,7 +331,8 @@
         '</g>' +
       '</g>' +
       '<rect data-id="frame" x="0" y="0" width="' + VW + '" height="' + VH + '" rx="18" fill="none" stroke="' + C.frame + '" stroke-width="2" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1"/>' +
-      '<text data-id="logo" class="t-ital" x="' + VW / 2 + '" y="' + (TOP + (VH - TOP) / 2 + 92) + '" text-anchor="middle" font-size="300" fill="' + C.ink + '" opacity="0" letter-spacing="-12">rg</text>' +
+      '</g>' +
+      '<g data-id="logo" opacity="0" transform="translate(480 300) scale(4.4) translate(-62.9 -41.9)"><path fill="#F2EDE4" fill-rule="evenodd" d="M57.5 49.0 L57.5 49.4 L86.6 82.8 L91.8 83.6 L97.5 83.7 L102.5 83.1 L107.0 82.0 L111.7 80.2 L117.1 77.3 L122.6 73.3 L125.7 70.3 L125.7 39.5 L92.8 39.5 L92.9 49.8 L115.1 49.9 L115.2 65.7 L111.2 68.8 L107.6 70.7 L103.2 72.3 L98.8 73.2 L96.6 73.4 L92.6 73.3 L89.2 72.7 L86.3 71.8 L83.0 70.3 L79.8 68.3 L77.8 66.7 L75.3 64.2 L71.7 59.2 L69.3 53.7 L68.0 48.5 L67.6 45.3 L67.5 41.7 L64.6 44.6 L62.2 46.5 L59.6 48.1ZM123.6 15.5 L120.7 11.8 L117.2 8.4 L112.7 5.1 L107.4 2.4 L102.2 0.8 L97.6 0.1 L92.4 0.0 L87.1 0.7 L82.2 2.1 L77.5 4.2 L73.6 6.6 L69.5 9.8 L65.8 13.8 L63.0 18.0 L60.8 22.6 L58.3 29.4 L57.2 31.3 L54.6 34.0 L52.1 35.5 L48.6 36.4 L10.6 36.4 L10.5 13.5 L10.7 12.6 L49.0 12.7 L51.9 13.6 L53.8 14.7 L55.9 16.6 L57.6 19.3 L57.8 19.3 L60.1 14.6 L63.7 9.8 L60.8 7.0 L57.3 4.7 L53.4 3.1 L49.4 2.3 L0.1 2.2 L0.1 83.1 L10.5 83.1 L10.5 47.1 L10.7 46.9 L35.7 46.9 L67.4 83.1 L80.8 83.1 L49.7 46.9 L53.0 46.2 L56.4 44.9 L59.4 43.2 L62.2 41.0 L64.3 38.8 L66.6 35.5 L68.0 32.7 L70.5 25.9 L71.9 23.3 L74.0 20.3 L76.5 17.6 L78.5 15.9 L81.3 14.0 L84.4 12.4 L89.4 10.8 L93.1 10.3 L96.8 10.4 L101.3 11.3 L105.3 12.9 L110.1 16.0 L113.0 18.7 L115.8 22.4 L116.1 22.4Z"/></g>' +
       '<g data-id="fx">' +
       '<g data-id="conf">' + confSVG + '</g>' +
       '<g data-id="check" opacity="0" transform="translate(842 0) scale(0)">' +
@@ -348,10 +350,10 @@
     var qa = function (s) { return Array.prototype.slice.call(root.querySelectorAll(s)); };
 
     var ref = {
-      paper: q('paper'), frame: q('frame'), sep: q('sep'), dots: q('dots'), trace: q('trace'),
+      paper: q('paper'), frame: q('frame'), frameWrap: q('frameWrap'), sep: q('sep'), dots: q('dots'), trace: q('trace'),
       wire: q('wire'), fills: qa('[data-fill]'), sh: qa('[data-sh]'), sh2: qa('[data-sh2]'), xs: qa('[data-x]'),
       traces: q('traces'), tr: qa('[data-tr]'), notes: qa('[data-note]'), scr: qa('[data-scr]'), notesG: q('notes'),
-      florBg: root.querySelector('.pj-flor [data-b="bg"]'), blocks: qa('.pj-flor [data-b]:not([data-b="bg"])'),
+      argBg: root.querySelector('.pj-arg [data-b="bg"]'), blocks: qa('.pj-arg [data-b]:not([data-b="bg"])'),
       wipe1: root.querySelector('[data-wipe="1"]'), wipe2: root.querySelector('[data-wipe="2"]'), pj1: q('pj1'), pj2: q('pj2'),
       design: q('design'), content: q('content'), chrome: q('chrome'),
       cursor: q('cursor'), add: q('add'), addA: q('add-a'), addB: q('add-b'), card0: root.querySelector('.pj-moda [data-card="0"]'),
@@ -432,7 +434,7 @@
       // diseño: los bloques se llenan de color
       if (changed('d')) {
         op(ref.design, S.d > 0 ? 1 : 0);
-        op(ref.florBg, seg(S.d, 0, .5));
+        op(ref.argBg, seg(S.d, 0, .5));
         ref.blocks.forEach(function (b, i) { op(b, easeOut(seg(S.d, .12 + i * .14, .52 + i * .14))); });
       }
       // proyectos: barrido de abajo arriba
@@ -503,7 +505,9 @@
         var m = S.m;
         op(ref.content, 1 - seg(m, 0, .6));
         op(ref.url, (S.url > 0 ? 1 : 0) * (1 - seg(m, 0, .4)));
-        op(ref.logo, easeOut(seg(m, .4, 1)));
+        op(ref.logo, easeOut(seg(m, .35, 1)));
+        var fadeFrame = 1 - seg(m, .3, .85);
+        attr(ref.frameWrap, 'opacity', f1(fadeFrame * 100) / 100);
         op(ref.fx, 1 - seg(m, 0, .3));
       }
 

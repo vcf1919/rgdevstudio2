@@ -5,10 +5,11 @@ Web personal de rgdevstudio. HTML, CSS y JavaScript sin framework ni paso de bui
 ```
 public/          el sitio (lo que se publica)
   index.html
-  css/styles.css
-  js/main.js
+  css/styles.css   colores, tipografía, duraciones y curvas en :root
+  js/lienzo.js     el lienzo SVG (boceto → wireframe → diseño → interactivo → publicado → logo)
+  js/main.js       la línea, el "director" del lienzo y el resto de animaciones (ajustes en CONFIG)
   vendor/        GSAP, ScrollTrigger y Lenis (copias locales)
-  fonts/         Archivo y Newsreader (copias locales)
+  fonts/         Lora (titulares), Newsreader cursiva y Archivo, recortadas a latín
 wrangler.jsonc   configuración de Cloudflare Workers (static assets)
 ```
 
@@ -41,3 +42,12 @@ Mientras no haya clave, el botón "Enviar" abre el correo del visitante con el m
 
 En `public/index.html`, cambia `https://rgdevstudio.netlify.app/` por tu dominio definitivo
 (canonical, `og:url`, `og:image` y el bloque JSON-LD).
+
+## Ajustar las animaciones
+
+- **Colores, duraciones y curvas**: variables al principio de `public/css/styles.css` (`--accent`, `--tint-*`, `--thread-w`, `--dur-*`, `--ease-*`, `--intro-*`, `--float-*`).
+- **Ritmo del scroll**: objeto `CONFIG` al principio de `public/js/main.js` (pantallas que dura cada sección fijada, altura de la "punta" de la línea, duración del confeti, contadores…).
+- **Las fases del lienzo** se reparten en la función `rebuild()` del director (`main.js`): cada `key(posición, { … })` dice en qué fase está el lienzo en ese punto del scroll.
+
+Modos: escritorio (≥1024×600) con lienzo fijo y secciones fijadas; móvil/tablet con lienzos en línea y menos fases;
+`prefers-reduced-motion` con todo quieto y visible.

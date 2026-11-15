@@ -1,55 +1,76 @@
 /* ==========================================================================
-   rgdevstudio · interacción y animaciones
-   GSAP + ScrollTrigger + Lenis. Solo se animan transform y opacity.
+   rgdevstudio · «La web que se construye sola»
+   GSAP + ScrollTrigger + Lenis. El lienzo (js/lienzo.js) y la línea se mueven
+   con el scroll; el resto de secciones tienen sus propias entradas.
+
+   Modos (los decide el <head> antes de pintar):
+     is-cine     escritorio ≥1024×600: lienzo fijo que viaja + línea completa + secciones fijadas
+     (ninguno)   móvil/tablet: lienzos en línea con menos fases, línea fina, sin fijar secciones
+     is-reduced  prefers-reduced-motion: todo quieto y visible, solo fundidos mínimos
    ========================================================================== */
 (function () {
   'use strict';
 
+  /* ------------------------------------------------------------------ *
+   * Ajustes (duraciones en segundos, pins en pantallas de scroll)
+   * ------------------------------------------------------------------ */
+  var CONFIG = {
+    lenisLerp: 0.1,
+    pin: { build: 1.2, works: 3, process: 2 },
+    pen: 0.55,                 // la "punta" de la línea va a esta altura de la pantalla
+    intro: { line: 0.9, toCanvas: 0.55, frame: 0.9, sketch: 1.6 },
+    reveal: { dur: 0.9, y: 24, stagger: 0.08 },
+    title: { dur: 1.05, stagger: 0.08 },
+    services: { x: -60, stagger: 0.12 },
+    project: { stagger: 0.06, y: 22 },
+    counter: 1.2,
+    launch: { load: 0.8, check: 0.7, confetti: 1.5 },
+    heroParallax: 0.12,
+    magnetic: 0.3,
+    marqueeBoost: 4,
+    tints: ['#F3D7DD', '#E6D2B8', '#DAD7CF']   // = --tint-flor / --tint-cafe / --tint-moda
+  };
+
   var root = document.documentElement;
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
-  var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  var clamp01 = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
+  var seg = function (v, a, b) { return b === a ? (v >= b ? 1 : 0) : clamp01((v - a) / (b - a)); };
   var lerp = function (a, b, t) { return a + (b - a) * t; };
+  var easeIO = function (t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
 
-  var gsap = window.gsap;
-  var ST = window.ScrollTrigger;
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var gsap = window.gsap, ST = window.ScrollTrigger, L = window.RGLienzo;
+  var reduced = root.classList.contains('is-reduced') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cine = root.classList.contains('is-cine') && !reduced;
   var animate = !!(gsap && ST) && !reduced;
-  var TRAVEL = '(min-width: 1024px) and (min-height: 600px) and (prefers-reduced-motion: no-preference)';
   var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var lenis = null;
-  var beforeJump = null; // en móvil, monta la escena de Trabajos antes de un salto para que la altura sea la final
-
-  if (!animate) root.classList.remove('js', 'is-travel');
+  if (!gsap || !ST) root.classList.remove('js', 'is-cine');
+  if (!animate) cine = false;
   window.__rgReady = true;
 
   var header = $('.site-header');
-  var headerH = function () { return header ? header.offsetHeight : 0; };
 
-  /* ------------------------------------------------------------------ *
-   * Funciones que no dependen de las animaciones
-   * ------------------------------------------------------------------ */
+  /* ==================================================================
+     1 · Lo que funciona siempre (con o sin animaciones)
+     ================================================================== */
   $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
 
   function scrollToTarget(target, immediate) {
-    if (beforeJump) beforeJump();
-    var y = target.id === 'inicio' ? 0 : target.getBoundingClientRect().top + window.scrollY - (target.id === 'contacto' ? 0 : headerH() - 1);
-    if (lenis) { lenis.resize(); lenis.scrollTo(y, { immediate: !!immediate, duration: 1.4 }); }
+    var y = target.id === 'inicio' ? 0 : target.getBoundingClientRect().top + window.scrollY - (target.id === 'contacto' ? 0 : header.offsetHeight - 1);
+    if (lenis) lenis.scrollTo(y, { immediate: !!immediate, duration: target.id === 'inicio' ? 2.4 : 1.5 });
     else window.scrollTo({ top: y, behavior: reduced || immediate ? 'auto' : 'smooth' });
   }
 
   /* Menú móvil */
-  var menu = $('#menu');
-  var toggle = $('.menu-toggle');
+  var menu = $('#menu'), toggle = $('.menu-toggle');
   function setMenu(open) {
     if (!menu || !toggle) return;
     toggle.setAttribute('aria-expanded', String(open));
     $('.menu-toggle-label', toggle).textContent = open ? 'Cerrar' : 'Menú';
     root.classList.toggle('menu-open', open);
     if (open) {
-      menu.hidden = false;
-      void menu.offsetWidth;
-      menu.classList.add('is-open');
+      menu.hidden = false; void menu.offsetWidth; menu.classList.add('is-open');
       if (lenis) lenis.stop(); else document.body.style.overflow = 'hidden';
     } else {
       menu.classList.remove('is-open');
@@ -65,7 +86,7 @@
     window.matchMedia('(min-width: 900px)').addEventListener('change', function (e) { if (e.matches) setMenu(false); });
   }
 
-  /* Enlaces internos */
+  /* Enlaces internos con scroll suave (y el foco va al destino, para teclado y lector) */
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
     if (!a) return;
@@ -80,37 +101,85 @@
     }
     scrollToTarget(target, wasOpen);
     history.replaceState(null, '', target.id === 'inicio' ? location.pathname : '#' + target.id);
+    var focusEl = target.id === 'contenido' ? target : (target.id === 'inicio' ? $('.logo') : target);
+    if (focusEl && focusEl !== $('.logo')) { focusEl.setAttribute('tabindex', '-1'); focusEl.focus({ preventScroll: true }); }
   });
 
-  /* FAQ: al abrir o cerrar cambia la altura de la página */
+  /* Cabecera: desenfoque al bajar + barra de progreso */
+  var progressBar = $('.nav-progress i');
+  // La altura total se guarda (leerla en cada fotograma obligaría a recalcular la maquetación)
+  var docMax = 0, scrolledState = null, lastBar = '';
+  function measureDoc() { docMax = document.documentElement.scrollHeight - window.innerHeight; }
+  window.addEventListener('resize', measureDoc);
+  window.addEventListener('load', measureDoc);
+  measureDoc();
+  function onScrollUI(y) {
+    var sc = y > 80;
+    if (sc !== scrolledState) { scrolledState = sc; header.classList.toggle('is-scrolled', sc); }
+    var bar = 'scaleX(' + (docMax > 0 ? clamp01(y / docMax) : 0).toFixed(4) + ')';
+    if (progressBar && bar !== lastBar) { lastBar = bar; progressBar.style.transform = bar; }
+  }
+  window.addEventListener('scroll', function () { if (!lenis) onScrollUI(window.scrollY); }, { passive: true });
+  onScrollUI(window.scrollY);
+
+  /* Enlace activo en la navegación */
+  (function () {
+    var links = $$('.nav a[href^="#"]');
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var current = null;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var id = en.target.id;
+        if (current) { current.classList.remove('is-active'); current.removeAttribute('aria-current'); }
+        current = map[id] || null;
+        if (current) { current.classList.add('is-active'); current.setAttribute('aria-current', 'location'); }
+      });
+    }, { rootMargin: '-45% 0px -54% 0px' });
+    ['inicio', 'trabajos', 'servicios', 'proceso', 'ventajas', 'sobre-mi', 'faq', 'contacto'].forEach(function (id) {
+      var s = document.getElementById(id); if (s) io.observe(s);
+    });
+  })();
+
+  /* FAQ: acordeón con altura fluida (solo uno abierto a la vez) */
+  var refreshSoon = (function () { var t; return function () { clearTimeout(t); t = setTimeout(function () { if (lenis) lenis.resize(); if (ST && animate) ST.refresh(); }, 120); }; })();
   $$('.faq-item').forEach(function (d) {
-    d.addEventListener('toggle', function () {
-      if (lenis) lenis.resize();
-      if (animate) ST.refresh();
+    var sum = $('summary', d), body = $('.faq-answer', d);
+    sum.addEventListener('click', function (e) {
+      if (reduced || !body.animate) { refreshSoon(); return; }
+      e.preventDefault();
+      if (d.__anim) d.__anim.cancel();
+      if (d.open) {
+        var h = body.offsetHeight;
+        d.__anim = body.animate([{ height: h + 'px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 420, easing: 'cubic-bezier(.65,0,.35,1)' });
+        d.__anim.onfinish = function () { d.open = false; d.__anim = null; refreshSoon(); };
+      } else {
+        $$('.faq-item[open]').forEach(function (o) { if (o !== d) $('summary', o).click(); });
+        d.open = true;
+        var h2 = body.offsetHeight;
+        d.__anim = body.animate([{ height: '0px', opacity: 0 }, { height: h2 + 'px', opacity: 1 }], { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' });
+        d.__anim.onfinish = function () { d.__anim = null; refreshSoon(); };
+      }
     });
   });
 
-  /* Formulario de contacto (Web3Forms) */
+  /* Formulario de contacto (Web3Forms) · micro-interacciones y validación */
   (function () {
     var form = $('.form');
     if (!form) return;
-    var status = $('.form-status', form);
-    var btn = $('.btn--submit', form);
-    var label = $('.submit-label', form);
+    var status = $('.form-status', form), btn = $('.btn--submit', form), label = $('.submit-label', form);
     var MAIL = 'rubeng.seo@gmail.com';
     var isEmail = function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); };
     var isPhone = function (v) { return v.replace(/\D/g, '').length >= 9 && /^[\d\s+().-]+$/.test(v); };
-
     function setError(input, msg) {
       var field = input.closest('.field');
       field.classList.toggle('has-error', !!msg);
+      if (msg) field.classList.remove('is-valid');
       input.setAttribute('aria-invalid', msg ? 'true' : 'false');
       $('.field-error', field).textContent = msg || '';
     }
-    function setStatus(msg, type) {
-      status.className = 'form-status' + (type ? ' is-' + type : '');
-      status.innerHTML = msg;
-    }
+    function setStatus(msg, type) { status.className = 'form-status' + (type ? ' is-' + type : ''); status.innerHTML = msg; }
     function validate() {
       var name = form.elements.nombre, contact = form.elements.contacto, first = null;
       var n = name.value.trim(), c = contact.value.trim();
@@ -122,19 +191,19 @@
       if (first) first.focus();
       return !first;
     }
-    ['nombre', 'contacto'].forEach(function (n) {
-      form.elements[n].addEventListener('input', function () { setError(form.elements[n], ''); });
+    form.elements.nombre.addEventListener('input', function (e) {
+      setError(e.target, ''); e.target.closest('.field').classList.toggle('is-valid', e.target.value.trim().length > 1);
     });
-
+    form.elements.contacto.addEventListener('input', function (e) {
+      setError(e.target, ''); var v = e.target.value.trim(); e.target.closest('.field').classList.toggle('is-valid', isEmail(v) || isPhone(v));
+    });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!validate()) return;
       var data = new FormData(form);
       var contact = String(data.get('contacto')).trim();
-      if (isEmail(contact)) data.append('email', contact); // así puedes darle a "Responder" en tu correo
+      if (isEmail(contact)) data.append('email', contact);
       var key = String(data.get('access_key') || '');
-
-      // Mientras no haya clave configurada, abrimos el correo del visitante con el mensaje ya escrito
       if (!key || /^TU_/.test(key)) {
         var body = 'Nombre: ' + data.get('nombre') + '\nNegocio: ' + (data.get('negocio') || '-') +
           '\nNecesito: ' + (data.get('proyecto') || '-') + '\nContacto: ' + contact + '\n\n' + (data.get('mensaje') || '');
@@ -142,84 +211,305 @@
         setStatus('Se ha abierto tu correo con el mensaje listo para enviar.', 'ok');
         return;
       }
-
       btn.disabled = true; label.textContent = 'Enviando…'; setStatus('');
       fetch(form.action, { method: 'POST', headers: { Accept: 'application/json' }, body: data })
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok && j.success }; }); })
         .then(function (res) {
           if (!res.ok) throw new Error('send');
-          form.reset();
+          form.reset(); $$('.field', form).forEach(function (f) { f.classList.remove('is-valid'); });
           setStatus('¡Mensaje enviado! Te respondo en menos de 24 horas.', 'ok');
         })
-        .catch(function () {
-          setStatus('No se ha podido enviar. Escríbeme a <a href="mailto:' + MAIL + '">' + MAIL + '</a>.', 'error');
-        })
+        .catch(function () { setStatus('No se ha podido enviar. Escríbeme a <a href="mailto:' + MAIL + '">' + MAIL + '</a>.', 'error'); })
         .then(function () { btn.disabled = false; label.textContent = 'Enviar'; });
     });
   })();
 
-  /* Texto que se desplaza en botones y enlaces (duplicado solo visual) */
-  $$('[data-roll]').forEach(function (el) {
-    var text = el.textContent;
-    el.textContent = '';
-    var wrap = document.createElement('span'); wrap.className = 'roll';
-    var a = document.createElement('span'); a.textContent = text;
-    var b = document.createElement('span'); b.textContent = text; b.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(a); wrap.appendChild(b); el.appendChild(wrap);
-  });
-
-  /* Cabecera: fondo al bajar, se esconde al hacer scroll hacia abajo */
-  (function () {
-    var last = window.scrollY;
-    function onScroll() {
-      var y = window.scrollY;
-      header.classList.toggle('is-scrolled', y > 24);
-      if (Math.abs(y - last) > 6) {
-        header.classList.toggle('is-hidden', y > last && y > 240 && !root.classList.contains('menu-open'));
-        last = y;
-      }
+  /* ==================================================================
+     2 · Lienzos en línea (móvil, tablet y movimiento reducido)
+     ================================================================== */
+  var inline = {};
+  function mount(slot, state) {
+    if (!slot || !L) return null;
+    var lz = L.create();
+    slot.appendChild(lz.el);
+    lz.set(state);
+    return lz;
+  }
+  // Los lienzos que no se ven al cargar se montan al acercarse (menos trabajo en el arranque)
+  // (o antes, en un momento libre del navegador, uno cada vez, para que no coincida con el scroll)
+  var idleQ = [];
+  function idleNext() {
+    var ric = window.requestIdleCallback || function (f) { return setTimeout(f, 200); };
+    ric(function () { var f = idleQ.shift(); if (f) { f(); if (idleQ.length) idleNext(); } }, { timeout: 3000 });
+  }
+  function mountLazy(key, slot, state, then) {
+    if (!slot || !L) return;
+    var done = false;
+    function go() {
+      if (done) return; done = true; io.disconnect();
+      inline[key] = mount(slot, state);
+      if (then) then(inline[key]);
     }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-  })();
+    var io = new IntersectionObserver(function (en) { if (en[0].isIntersecting) go(); }, { rootMargin: '800px 0px' });
+    io.observe(slot);
+    idleQ.push(go);
+    if (idleQ.length === 1) setTimeout(idleNext, 1500);
+  }
+  var onLazy = {};
+  var DONE = { f: 1, sk: 1, s: 0, w: 1, wt: 0, d: 1 };
+  function withDone(o) { var r = {}, k; for (k in DONE) r[k] = DONE[k]; for (k in o) r[k] = o[k]; return r; }
 
-  if (!animate) return;
+  function mountInline() {
+  if (!cine && L) {
+    inline.hero = mount($('[data-slot="hero"]'), reduced ? { f: 1, sk: 1, s: 1 } : { f: 0, sk: 0, s: 1 });
+    ['flor', 'cafe', 'moda'].forEach(function (k, i) {
+      mountLazy(k, $('[data-slot="' + k + '"]'), withDone({ p: i }), function (lz) { if (onLazy.project) onLazy.project(lz); });
+    });
+    mountLazy('launch', $('[data-slot="launch"]'), withDone({ url: 1, load: reduced ? 1 : 0, check: reduced ? 1 : 0 }), function (lz) { if (onLazy.launch) onLazy.launch(lz); });
+    mountLazy('logo', $('[data-slot="logo"]'), withDone({ m: 1 }));
+  }
+  }
+  // El arranque se reparte en tareas cortas para no bloquear el hilo principal (TBT)
+  var tick = function () { return new Promise(function (r) { setTimeout(r, 0); }); };
 
-  /* ------------------------------------------------------------------ *
-   * Animaciones
-   * ------------------------------------------------------------------ */
+  /* ==================================================================
+     3 · La línea: un trazo por sección que empieza donde acaba el anterior
+     ================================================================== */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var threads = {};
+
+  // Posición dentro de la sección SIN transformaciones (las entradas animadas no deben torcer la línea)
+  function absOff(el) { var x = 0, y = 0; while (el) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; } return [x, y]; }
+  function relRect(el, box) {
+    var a = absOff(el), o = absOff(box), w = el.offsetWidth, h = el.offsetHeight, l = a[0] - o[0], t = a[1] - o[1];
+    return { l: l, t: t, r: l + w, b: t + h, w: w, h: h, cx: l + w / 2, cy: t + h / 2 };
+  }
+  function P(x, y) { return Math.round(x * 10) / 10 + ' ' + Math.round(y * 10) / 10; }
+  function vline(x0, y0, x1, y1) { // bajada suave en S entre dos puntos
+    var my = (y1 - y0) * 0.5;
+    return 'M' + P(x0, y0) + 'C' + P(x0, y0 + my) + ' ' + P(x1, y1 - my) + ' ' + P(x1, y1);
+  }
+  function contour(r, pad, rad) { // contorno de una tarjeta, empezando arriba a la izquierda
+    var l = r.l - pad, t = r.t - pad, ri = r.r + pad, b = r.b + pad, k = rad + pad;
+    return 'L' + P(l + k, t) + 'L' + P(ri - k, t) + 'Q' + P(ri, t) + ' ' + P(ri, t + k) + 'L' + P(ri, b - k) + 'Q' + P(ri, b) + ' ' + P(ri - k, b) +
+      'L' + P(l + k, b) + 'Q' + P(l, b) + ' ' + P(l, b - k) + 'L' + P(l, t + k) + 'Q' + P(l, t) + ' ' + P(l + k, t);
+  }
+
+  // Dónde cruza la línea de una sección a la siguiente (x en px desde la izquierda de la pantalla)
+  function edgeX(name) {
+    var W = window.innerWidth, g = Math.min(Math.max(20, W * 0.04), 56);
+    if (!cine) {
+      if (name === 'faq' || name === 'contact') { var fl = $('.faq-list'); return fl.getBoundingClientRect().left - Math.min(22, g - 6) + 1; }
+      return Math.max(8, g * 0.45);
+    }
+    var ws = $('.works-slot').getBoundingClientRect(), sn = $('.step-num').getBoundingClientRect(), fl2 = $('.faq-list').getBoundingClientRect();
+    return {
+      hero: W / 2, build: W / 2, works: ws.left + ws.width / 2, marquee: ws.left + ws.width / 2,
+      services: sn.left + sn.width / 2, process: g * 0.6, perks: g * 0.6, about: fl2.left - 21, faq: fl2.left - 21, contact: fl2.left - 21
+    }[name];
+  }
+  function bx(name, box) { return edgeX(name) - box.getBoundingClientRect().left; }
+
+  // Cada constructor devuelve trozos { d, a, b } (a–b: tramo del progreso de la sección en que se dibuja)
+  var BUILD = {
+    hero: function (box, H, W) {
+      // el titular puede estar animándose: se mide su máscara (sin transformar), no el texto
+      var k = relRect($('.hero-kicker'), box), slot = relRect($('.hero-slot'), box);
+      var lastL = relRect($('.hero-title .l:last-child'), box), emEl = $('.hero-title em');
+      var em = { l: lastL.l + emEl.offsetLeft * 0, w: emEl.offsetWidth, b: lastL.b - lastL.h * 0.1, h: lastL.h };
+      em.l = lastL.l + (emEl.getBoundingClientRect().left - emEl.parentNode.getBoundingClientRect().left);
+      em.r = em.l + em.w;
+      var x0 = cine ? Math.max(10, k.l - 34) : Math.max(8, k.l * 0.45), y0 = k.t + 2;
+      var uy = em.b - em.h * 0.02;
+      var a = 'M' + P(x0, y0) + 'C' + P(x0, y0 + (uy - y0) * 0.55) + ' ' + P(em.l - 60, uy + 6) + ' ' + P(em.l - 4, uy + 4) +
+        'C' + P(em.l + em.w * 0.3, uy - 3) + ' ' + P(em.l + em.w * 0.65, uy + 7) + ' ' + P(em.r + 8, uy);
+      var b, c, end = bx('hero', box);
+      if (cine || slot.l > W * 0.4) {
+        b = 'M' + P(em.r + 8, uy) + 'C' + P(em.r + 70, uy - 10) + ' ' + P(slot.l - 80, slot.cy + 40) + ' ' + P(slot.l - 6, slot.cy);
+        c = cine ? vline(slot.cx, slot.b + 30, end, H)
+          : 'M' + P(slot.cx, slot.b + 24) + 'L' + P(slot.cx, H - 90) + 'C' + P(slot.cx, H - 30) + ' ' + P(end + 60, H - 50) + ' ' + P(end, H);
+      } else {
+        // en móvil vuelve al margen para no cruzar el texto
+        b = 'M' + P(em.r + 8, uy) + 'C' + P(em.r + 40, uy + 4) + ' ' + P(em.r + 10, uy + 34) + ' ' + P(lerp(x0, em.r, .5), uy + 30) +
+          'C' + P(x0 + 30, uy + 28) + ' ' + P(x0, uy + 40) + ' ' + P(x0, uy + 80) + 'L' + P(x0, slot.t - 30) +
+          'C' + P(x0, slot.t - 12) + ' ' + P(slot.l + 4, slot.t - 14) + ' ' + P(slot.l + 10, slot.t - 4);
+        c = vline(slot.l + 10, slot.b + 8, end, H);
+      }
+      return [{ d: a, intro: 'a' }, { d: b, intro: 'b' }, { d: c, a: 0.04, b: 0.9 }];
+    },
+    build: function (box, H, W, pre) {
+      var s = relRect($('.build-slot'), box), x = bx('build', box);
+      return [{ d: vline(bx('hero', box), 0, s.cx, s.t - 14), a: 0, b: pre }, { d: vline(s.cx, s.b + 14, x, H), a: 0.93, b: 1 }];
+    },
+    works: function (box, H, W, pre) {
+      if (!cine) { var x = bx('works', box); return [{ d: 'M' + P(x, 0) + 'L' + P(x, H), a: 0, b: 1 }]; }
+      var s = relRect($('.works-slot'), box);
+      return [
+        { d: 'M' + P(bx('build', box), 0) + 'C' + P(bx('build', box), s.t * 0.6) + ' ' + P(s.l - 60, s.t - 10) + ' ' + P(s.l - 16, s.t + 30), a: 0, b: pre },
+        { d: vline(s.cx, s.b + 70, bx('works', box), H), a: 0.95, b: 1 }
+      ];
+    },
+    marquee: function (box, H) { var x = bx('marquee', box); return [{ d: 'M' + P(bx('works', box), 0) + 'L' + P(x, H), a: 0, b: 1 }]; },
+    services: function (box, H) {
+      var cards = $$('.service', box).map(function (c) { return relRect(c, box); });
+      var x0 = bx('marquee', box), d = 'M' + P(x0, 0);
+      var c0 = cards[0], pad = 9;
+      d += 'C' + P(x0, c0.t * 0.6) + ' ' + P(c0.l + 80, c0.t - pad - 60) + ' ' + P(c0.l + 30, c0.t - pad);
+      cards.forEach(function (c, i) {
+        d += contour(c, pad, 24);
+        var n = cards[i + 1];
+        if (n) d += 'C' + P(c.l - pad - 18, c.t + 40) + ' ' + P(n.l - pad - 18, n.t - 40) + ' ' + P(n.l + 30, n.t - pad);
+      });
+      var last = cards[cards.length - 1], xe = bx('services', box);
+      d += 'C' + P(last.l - 40, last.t + 60) + ' ' + P(last.l - 30, last.b + 40) + ' ' + P(lerp(last.l, xe, .5), last.b + 60) + 'S' + P(xe, H - 60) + ' ' + P(xe, H);
+      return [{ d: d, a: 0, b: 1 }];
+    },
+    process: function (box, H, W, pre) {
+      var nums = $$('.step-num', box).map(function (n) { return relRect(n, box); });
+      var x0 = bx('services', box), first = nums[0], last = nums[nums.length - 1];
+      var mid = 'M' + P(first.cx, first.t + 4) + 'L' + P(last.cx, last.b - 4);
+      var out = [
+        { d: vline(x0, 0, first.cx, first.t + 4), a: 0, b: cine ? pre : 0.12 },
+        { d: mid, a: cine ? pre + 0.02 : 0.12, b: cine ? 0.94 : 0.85, steps: nums.map(function (n) { return (n.cy - first.t) / Math.max(1, last.b - first.t); }) },
+        { d: vline(last.cx, last.b - 4, bx('process', box), H), a: cine ? 0.96 : 0.85, b: 1 }
+      ];
+      return out;
+    },
+    perks: function (box, H) {
+      if (!cine) { var xm = bx('perks', box); return [{ d: 'M' + P(xm, 0) + 'L' + P(xm, H), a: 0, b: 1 }]; }
+      var st = $$('.stat', box).map(function (s) { return relRect(s, box); });
+      var x0 = bx('process', box), x1 = bx('perks', box);
+      var mx = st.length > 1 && st[1].l > st[0].r ? (st[0].r + st[1].l) / 2 : st[0].r + 24;
+      var top = st[0].t - 30, bot = Math.max(st[0].b, (st[1] || st[0]).b) + 30;
+      return [{ d: 'M' + P(x0, 0) + 'C' + P(x0, top * 0.7) + ' ' + P(mx, top - 140) + ' ' + P(mx, top) + 'L' + P(mx, bot) + 'C' + P(mx, bot + 160) + ' ' + P(x1, H - 220) + ' ' + P(x1, H), a: 0, b: 1 }];
+    },
+    about: function (box, H) {
+      if (!cine) { var xa = bx('perks', box); return [{ d: 'M' + P(xa, 0) + 'C' + P(xa, H * .6) + ' ' + P(bx('about', box), H * .6) + ' ' + P(bx('about', box), H), a: 0, b: 1 }]; }
+      var s = relRect($('.about-sign'), box), x0 = bx('perks', box), x1 = bx('about', box);
+      var y = s.b + 6;
+      var d = 'M' + P(x0, 0) + 'C' + P(x0, y * 0.5) + ' ' + P(s.l - 90, y - 10) + ' ' + P(s.l - 6, y) +
+        'C' + P(s.l + s.w * 0.4, y + 8) + ' ' + P(s.r - 10, y - 6) + ' ' + P(s.r + 22, y - 20) +   // firma
+        'C' + P(s.r + 40, y - 34) + ' ' + P(s.r + 20, y - 46) + ' ' + P(s.r + 8, y - 28) +
+        'C' + P(s.r - 4, y - 8) + ' ' + P(s.r + 30, y + 20) + ' ' + P(s.r + 70, y + 10) +
+        'C' + P(s.r + 140, y + 60) + ' ' + P(x1, H - 160) + ' ' + P(x1, H);
+      return [{ d: d, a: 0, b: 1 }];
+    },
+    faq: function (box, H) { var x = bx('faq', box); return [{ d: 'M' + P(bx('about', box), 0) + 'L' + P(x, H), a: 0, b: 1 }]; },
+    contact: function (box, H) {
+      var x0 = bx('faq', box);
+      var fields = $$('.form [data-anchor]', box).map(function (f) { return relRect(f, box); });
+      var btn = relRect($('.btn--submit', box), box);
+      var fx = fields[0].l - 22;
+      var d = 'M' + P(x0, 0) + 'C' + P(x0, fields[0].t * 0.6) + ' ' + P(fx, fields[0].t - 120) + ' ' + P(fx, fields[0].t + 10);
+      d += 'L' + P(fx, btn.cy - 40) + 'C' + P(fx, btn.cy - 10) + ' ' + P(btn.l - 30, btn.cy) + ' ' + P(btn.l - 3, btn.cy);
+      return [{ d: d, a: 0, b: 1, end: true }];
+    }
+  };
+
+  function makeThread(box) {
+    var name = box.getAttribute('data-thread');
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('class', 'thread'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+    var tip = document.createElementNS(SVGNS, 'circle');
+    tip.setAttribute('class', 'thread-tip'); tip.setAttribute('r', cine ? '3.6' : '2.6'); tip.style.opacity = '0';
+    svg.appendChild(tip);
+    box.insertBefore(svg, box.firstChild);
+    var T = { name: name, box: box, svg: svg, tip: tip, pieces: [], prog: 0, intro: { a: reduced ? 1 : 0, b: reduced ? 1 : 0 }, pre: 0 };
+    threads[name] = T;
+    return T;
+  }
+
+  function buildThread(T) {
+    var box = T.box, H = box.offsetHeight, W = box.offsetWidth;
+    T.svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    T.pieces.forEach(function (p) { p.el.remove(); });
+    var defs = BUILD[T.name](box, H, W, T.pre);
+    T.pieces = defs.map(function (def) {
+      var el = document.createElementNS(SVGNS, 'path');
+      el.setAttribute('d', def.d);
+      T.svg.insertBefore(el, T.tip);
+      def.el = el; def.len = el.getTotalLength();
+      def.pts = [];
+      for (var i = 0; i <= 96; i++) { var q = el.getPointAtLength(def.len * i / 96); def.pts.push([q.x, q.y]); }
+      el.style.strokeDasharray = def.len + ' ' + (def.len + 2);
+      return def;
+    });
+    drawThread(T, T.prog, true);
+  }
+
+  function setPiece(p, t) {
+    if (p.t === t) return; p.t = t;
+    p.el.style.strokeDashoffset = String(p.len * (1 - t));
+  }
+  function drawThread(T, prog, force) {
+    if (!force && T.prog === prog) return;
+    T.prog = prog;
+    var tipAt = null;
+    T.pieces.forEach(function (p) {
+      var t = p.intro ? T.intro[p.intro] : (reduced ? 1 : seg(prog, p.a, p.b));
+      if (force) p.t = -1;
+      setPiece(p, t);
+      if (t > 0 && t < 1 && !reduced) tipAt = p;
+      if (p.steps) T.onSteps && T.onSteps(t, p.steps);
+      if (p.end && T.onEnd) T.onEnd(t >= 0.999);
+    });
+    if (tipAt) {
+      var f = tipAt.t * 96, i0 = Math.floor(f), A = tipAt.pts[i0], B = tipAt.pts[Math.min(96, i0 + 1)], k = f - i0;
+      T.tip.setAttribute('cx', (A[0] + (B[0] - A[0]) * k).toFixed(1)); T.tip.setAttribute('cy', (A[1] + (B[1] - A[1]) * k).toFixed(1));
+      if (!T.tipOn) { T.tipOn = true; T.tip.style.opacity = '1'; }
+    } else if (T.tipOn !== false) { T.tipOn = false; T.tip.style.opacity = '0'; }
+  }
+
+  var threadBoxes = $$('[data-thread]').filter(function (b) { return b.offsetParent !== null || getComputedStyle(b).display !== 'none'; });
+  if (!cine) threadBoxes = threadBoxes.filter(function (b) { return b.getAttribute('data-thread') !== 'build'; });
+  threadBoxes.forEach(makeThread);
+
+  // pasos del proceso (sin animación: todos activos)
+  var steps = $$('.step');
+  if (threads.process) threads.process.onSteps = function (t, fr) {
+    steps.forEach(function (s, i) { s.classList.toggle('is-on', reduced || t >= fr[i] - 0.004); });
+  };
+  var submit = $('.btn--submit');
+  if (threads.contact) threads.contact.onEnd = function (on) { submit.classList.toggle('is-lit', on); };
+
+  function buildAllThreads() { Object.keys(threads).forEach(function (k) { buildThread(threads[k]); }); }
+
+  if (!animate) {
+    // Sin animaciones: la línea ya dibujada y todo en su sitio
+    var fontsOk = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    fontsOk.then(function () { mountInline(); buildAllThreads(); });
+    window.addEventListener('resize', (function () { var t; return function () { clearTimeout(t); t = setTimeout(buildAllThreads, 200); }; })());
+    return;
+  }
+
+  /* ==================================================================
+     4 · Animaciones
+     ================================================================== */
   gsap.registerPlugin(ST);
   gsap.defaults({ ease: 'power3.out', duration: 1 });
   ST.config({ ignoreMobileResize: true });
 
-  /* Scroll suave */
-  // Posición de scroll guardada al moverse: leer window.scrollY en cada fotograma obliga a recalcular la maquetación
-  var scrollPos = window.scrollY;
+  // Scroll suave
   if (window.Lenis) {
-    lenis = new window.Lenis({ lerp: 0.1, wheelMultiplier: 1 });
-    lenis.on('scroll', function (l) { scrollPos = l.animatedScroll; ST.update(); });
+    lenis = new window.Lenis({ lerp: CONFIG.lenisLerp, wheelMultiplier: 1 });
+    lenis.on('scroll', function (l) { ST.update(); onScrollUI(l.animatedScroll); marqueeVelocity(l.velocity); });
     gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
     gsap.ticker.lagSmoothing(0);
-  } else {
-    window.addEventListener('scroll', function () { scrollPos = window.scrollY; }, { passive: true });
   }
 
-  /* --- Partir un titular en líneas con máscara --- */
+  /* --- Titulares por líneas con máscara --- */
   function splitLines(el) {
-    var original = el.innerHTML;
-    var words = [], cur = null, needNew = true;
+    var original = el.innerHTML, words = [], cur = null, needNew = true;
     function push(text, tag) {
       text.split(/(\s+)/).forEach(function (piece) {
         if (!piece) return;
         if (/^\s+$/.test(piece)) { needNew = true; return; }
         if (needNew || !cur) { cur = document.createElement('span'); cur.style.display = 'inline-block'; words.push(cur); needNew = false; }
-        if (tag) { var t = document.createElement(tag); t.textContent = piece; cur.appendChild(t); }
-        else cur.appendChild(document.createTextNode(piece));
+        if (tag) { var t = document.createElement(tag); t.textContent = piece; cur.appendChild(t); } else cur.appendChild(document.createTextNode(piece));
       });
     }
     Array.prototype.forEach.call(el.childNodes, function (n) {
-      if (n.nodeType === 3) push(n.textContent, null);
-      else if (n.nodeType === 1) push(n.textContent, n.tagName.toLowerCase());
+      if (n.nodeType === 3) push(n.textContent, null); else if (n.nodeType === 1) push(n.textContent, n.tagName.toLowerCase());
     });
     el.innerHTML = '';
     words.forEach(function (w, i) { if (i) el.appendChild(document.createTextNode(' ')); el.appendChild(w); });
@@ -229,766 +519,350 @@
       if (top === null || Math.abs(t - top) > 4) { lines.push([]); top = t; }
       lines[lines.length - 1].push(w.innerHTML);
     });
-    el.innerHTML = lines.map(function (l) {
-      return '<span class="line"><span class="line-in">' + l.join(' ') + '</span></span>';
-    }).join('');
+    el.innerHTML = lines.map(function (l) { return '<span class="line"><span class="line-in">' + l.join(' ') + '</span></span>'; }).join('');
     return { lines: $$('.line-in', el), revert: function () { el.innerHTML = original; } };
   }
 
-  /* Titular: las líneas suben con máscara y la cursiva se "escribe" letra a letra */
-  function revealTitle(el, opts) {
-    var o = opts || {};
-    var s = splitLines(el);
-    var chars = [];
-    $$('em', el).forEach(function (em) {
-      em.innerHTML = em.textContent.split('').map(function (c) { return '<span class="ch">' + c + '</span>'; }).join('');
-      chars = chars.concat($$('.ch', em));
-    });
-    gsap.set(el, { opacity: 1 });
-    var tl = gsap.timeline({ delay: o.delay || 0, onComplete: s.revert });
-    tl.from(s.lines, { yPercent: 115, duration: 1.15, ease: 'expo.out', stagger: o.stagger || 0.1 });
-    if (chars.length) {
-      tl.from(chars, { opacity: 0, yPercent: 55, rotate: 16, x: -8, duration: 0.75, ease: 'back.out(2.2)', stagger: 0.045 }, 0.3);
-    }
-    return tl;
-  }
+  var fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(function (r) { setTimeout(r, 1200); })]) : Promise.resolve();
 
-  /* ==========================================================================
-     Escenas: «lluvia de pedidos» (inicio) y «tu web se construye» (Trabajos)
-     Todo se anima con transform y opacity sobre elementos pequeños.
-     ========================================================================== */
-  var fontsReady = document.fonts && document.fonts.ready
-    ? Promise.race([document.fonts.ready, new Promise(function (r) { setTimeout(r, 1500); })])
-    : Promise.resolve();
-
-  /* --- El móvil 3D: cuerpo, trasera y las pantallas de los tres proyectos --- */
-  function buildStagePhone() {
-    var phone = document.createElement('div');
-    phone.className = 'phone';
-    var body = '<div class="phone-body">';
-    [-0.6, 0, 0.6].forEach(function (z) { body += '<i style="transform:translateZ(' + z + 'em)"></i>'; }); // grosor con 3 capas
-    body += '</div>';
-    phone.innerHTML = body +
-      '<div class="phone-back"><span class="camera"><i></i><i></i><i></i></span><span class="back-mono">rg</span></div>' +
-      '<div class="phone-front"><div class="phone-screen"></div><span class="island"></span><span class="gloss"></span></div>';
-    var screen = $('.phone-screen', phone);
-    $$('.project .screen').forEach(function (s) { screen.appendChild(s.cloneNode(true)); });
-    return phone;
-  }
-
-  /* Posición de un elemento dentro de un antecesor (valores de maquetación: no les afectan los giros) */
-  function offsetIn(el, ancestor) {
-    var x = 0, y = 0, n = el;
-    while (n && n !== ancestor) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
-    return { x: x, y: y, w: el.offsetWidth, h: el.offsetHeight };
-  }
-  function fmtEuros(v) {
-    var s = String(Math.round(v));
-    return s.length > 3 ? s.slice(0, -3) + '.' + s.slice(-3) : s;
-  }
-
-  var TINTS = ['#F2D9DD', '#E7D5BD', '#D6D9CC'];
-  var TAP_BTN = ['.fl-btn', '.mc-btn', '.mn-btn'];
-  // Notificaciones de un negocio genérico (ilustración, no son datos de clientes reales)
-  var RAIN_ITEMS = [
-    ['Nuevo pedido', '2 productos · envío hoy · 64,00 €'],
-    ['Reserva confirmada', 'Mesa para 4 · sábado 10:00'],
-    ['Pago recibido', 'Pedido #1043 · 129,00 €'],
-    ['Nuevo mensaje', '¿Hacéis envíos esta tarde?'],
-    ['Nuevo pedido', '3 productos · recogida en tienda'],
-    ['Reseña de 5 estrellas', '«Precioso, y llegó rapidísimo»'],
-    ['Pago recibido', 'Pedido #1044 · 48,00 €']
-  ];
-  // Hacia dónde salta cada notificación: fracción del ancho y alto desde el centro, y giro
-  var SCATTER = [[-0.3, -0.3, -9], [0.3, -0.19, 8], [-0.33, 0.02, 6], [0.32, 0.1, -7], [-0.25, 0.29, -5], [0.27, 0.34, 9], [0.03, -0.4, 4]];
-
-  /* --- Lluvia de pedidos: las notificaciones se apilan en el móvil y luego llenan la página --- */
-  function buildRain(box, G) {
-    box.className = 'rain-wrap';
-    var html = '<div class="rain-total"><p class="rain-kicker">Un buen día con tu web</p><p class="rain-num"><span>0</span> <em>€</em></p></div>';
-    RAIN_ITEMS.forEach(function () {
-      html += '<div class="notif"><i class="notif-ico">rg</i><div class="notif-txt"><b></b><span></span></div><small>ahora</small></div>';
-    });
-    box.innerHTML = html;
-    var cards = $$('.notif', box), total = $('.rain-total', box), num = $('.rain-num span', box);
-    cards.forEach(function (c, k) {
-      $('b', c).textContent = RAIN_ITEMS[k][0];
-      $('.notif-txt span', c).textContent = RAIN_ITEMS[k][1];
-    });
-
-    var tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
-    var cw = function () { return G.card ? G.card().w : cards[0].offsetWidth; };
-    var ch = function () { return G.card ? G.card().h : cards[0].offsetHeight; };
-    var ax = function () { return G.anchor().x - cw() / 2; };
-    var ay = function () { var a = G.anchor(); return a.y - a.u * 25; };
-    var step = function () { return ch() + G.anchor().u * 0.9; };
-
-    // 1) Llegan una a una a la pantalla del móvil y empujan a las anteriores
-    cards.forEach(function (c, k) {
-      var t = k * 0.28;
-      tl.fromTo(c, { x: ax, y: function () { return ay() - 30; }, autoAlpha: 0, scale: 0.9, rotate: 0 },
-        { y: ay, autoAlpha: 1, scale: 1, duration: 0.32, ease: 'back.out(1.7)', immediateRender: false }, t);
-      cards.slice(0, k).forEach(function (prev, j) {
-        tl.to(prev, { y: function () { return ay() + (k - j) * step(); }, duration: 0.3 }, t);
+  tick().then(function () { mountInline(); return tick(); }).then(function () { return fontsReady; }).then(function () {
+    /* Titulares de sección */
+    $$('[data-split]').forEach(function (el) {
+      var s = splitLines(el);
+      gsap.set(el, { opacity: 1 });
+      gsap.from(s.lines, {
+        yPercent: 112, duration: CONFIG.title.dur, ease: 'expo.out', stagger: CONFIG.title.stagger,
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true }, onComplete: s.revert
       });
     });
-
-    // 2) El contador de ventas sube
-    var B = cards.length * 0.28 + 0.35;
-    var TA = G.totalAt || 0.5;
-    var sum = { v: 0 };
-    // Tamaño del contador medido una vez por recálculo (tiene ancho fijo, así no se mueve al crecer la cifra)
-    var tsz = null;
-    var TS = function () { if (!tsz) tsz = { w: total.offsetWidth, h: total.offsetHeight }; return tsz; };
-    ST.addEventListener('refreshInit', function () { tsz = null; });
-    var tx = function () { return G.total().x - TS().w / 2; };
-    var ty = function () { return G.total().y - TS().h / 2; };
-    tl.fromTo(total, { x: tx, y: function () { return ty() + 24; }, autoAlpha: 0 },
-      { y: ty, autoAlpha: 1, duration: 0.4, immediateRender: false }, TA)
-      .to(sum, { v: 1284, duration: Math.min(2.4, B + 1.4 - TA), ease: 'power1.inOut', onUpdate: function () { num.textContent = fmtEuros(sum.v); } }, TA);
-
-    // 3) Las notificaciones saltan fuera del móvil y se reparten por la página; después se van
-    cards.forEach(function (c, k) {
-      var s = (G.scatter || SCATTER)[k];
-      var px = function () { var z = G.size(); return z.w / 2 + s[0] * z.w * G.spread - cw() / 2; };
-      var py = function () { var z = G.size(); return z.h / 2 + s[1] * z.h - ch() / 2; };
-      tl.to(c, { x: px, y: py, rotate: s[2], scale: 1.06, duration: 0.8, ease: 'power3.out' }, B + k * 0.035)
-        .to(c, { y: function () { return py() - G.size().h * 0.3; }, autoAlpha: 0, duration: 0.55, ease: 'power2.in' }, B + 1.3 + k * 0.03);
+    /* Bloques que aparecen */
+    $$('[data-reveal]').forEach(function (el) {
+      gsap.to(el, { opacity: 1, y: 0, duration: CONFIG.reveal.dur, scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
     });
-    tl.to(total, { y: function () { return ty() - 30; }, autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, B + 1.5);
-    return tl;
+    $$('[data-reveal-group]').forEach(function (g) {
+      gsap.to(g.children, { opacity: 1, y: 0, duration: CONFIG.reveal.dur, stagger: CONFIG.reveal.stagger, scrollTrigger: { trigger: g, start: 'top 85%', once: true } });
+    });
+
+    return tick();
+  }).then(function () {
+    setupScenes();
+    return tick();
+  }).then(function () {
+    ST.refresh();
+  });
+
+  /* --- Intro: titular (CSS), la línea se dibuja sola y el lienzo aparece --- */
+  function intro(lz) {
+    var I = CONFIG.intro;
+    var T = threads.hero, ex = { f: 0, sk: 0 };
+    var tl = gsap.timeline({ delay: 0.35 });
+    if (T) {
+      tl.to(T.intro, { a: 1, duration: I.line, ease: 'power2.inOut', onUpdate: function () { drawThread(T, T.prog, true); } });
+      tl.to(T.intro, { b: 1, duration: I.toCanvas, ease: 'power1.inOut', onUpdate: function () { drawThread(T, T.prog, true); } });
+    }
+    tl.to(ex, { f: 1, duration: I.frame, ease: 'none', onUpdate: function () { lz.extra(ex); } }, T ? '-=0.12' : 0);
+    tl.to(ex, { sk: 1, duration: I.sketch, ease: 'none', onUpdate: function () { lz.extra(ex); } }, '-=0.45');
   }
 
-  /* --- «Tu web se construye»: boceto gris encima de cada pantalla --- */
-  function buildWire(screen) {
-    var scroller = $('.screen-scroll', screen);
-    var wire = document.createElement('div');
-    wire.className = 'wire';
-    var paper = document.createElement('i');
-    paper.className = 'wire-paper';
-    wire.appendChild(paper);
-    var blocks = [], boxes = [];
-    Array.prototype.forEach.call(scroller.children, function (el) {
-      if (typeof el.offsetTop !== 'number') return; // los SVG sueltos aparecen con el color
-      var b = document.createElement('i');
-      b.className = 'wire-box';
-      wire.appendChild(b);
-      blocks.push(el); boxes.push(b);
+  /* ==================================================================
+     Escenas
+     ================================================================== */
+  function setupScenes() {
+    var vh = function () { return window.innerHeight; };
+    var pins = {};
+    var projects = $$('.project');
+
+    // Los hilos se recalculan en cada refresh (cambia el tamaño de la pantalla, se abre una FAQ…)
+    ST.addEventListener('refresh', function () { measureDoc(); buildAllThreads(); if (director) director.rebuild(); });
+
+    /* --- Pins (solo escritorio) --- */
+    if (cine) {
+      pins.build = ST.create({ trigger: '.build-pin', start: 'top top', end: function () { return '+=' + vh() * CONFIG.pin.build; }, pin: true, anticipatePin: 1 });
+      pins.works = ST.create({ trigger: '.works-pin', start: 'top top', end: function () { return '+=' + vh() * CONFIG.pin.works; }, pin: true, anticipatePin: 1 });
+      pins.process = ST.create({ trigger: '.process-pin', start: 'top top', end: function () { return '+=' + vh() * CONFIG.pin.process; }, pin: true, anticipatePin: 1 });
+    }
+
+    /* --- Progreso de la línea en cada sección --- */
+    Object.keys(threads).forEach(function (name) {
+      var T = threads[name], pin = pins[name];
+      if (name === 'hero') {
+        T.st = ST.create({ trigger: T.box, start: 'top top', end: 'bottom top', onUpdate: function (s) { drawThread(T, s.progress); } });
+        return;
+      }
+      if (pin) {
+        // empieza antes del pin (cuando la sección asoma) y acaba con él
+        T.st = ST.create({
+          trigger: T.box, start: 'top ' + Math.round(CONFIG.pen * 100) + '%', end: function () { return pin.end; },
+          onRefresh: function (s) { T.pre = (pin.start - s.start) / Math.max(1, s.end - s.start); },
+          onUpdate: function (s) { drawThread(T, s.progress); }
+        });
+        return;
+      }
+      var endTrig = name === 'contact' ? { endTrigger: '.btn--submit', end: 'center 62%' } : { end: 'bottom ' + Math.round(CONFIG.pen * 100) + '%' };
+      T.st = ST.create(Object.assign({ trigger: T.box, start: 'top ' + Math.round(CONFIG.pen * 100) + '%', onUpdate: function (s) { drawThread(T, s.progress); } }, endTrig));
     });
-    screen.appendChild(wire);
-    var W = {
-      blocks: blocks, boxes: boxes, paper: paper,
-      place: function () {
-        var Wd = screen.offsetWidth, H = screen.offsetHeight;
-        if (!Wd || !H) return;
-        blocks.forEach(function (el, i) {
-          var b = boxes[i], top = el.offsetTop, h = Math.min(el.offsetHeight, H - top);
-          b.style.display = top < H * 0.95 && h > 4 ? '' : 'none';
-          b.style.left = (el.offsetLeft / Wd * 100) + '%';
-          b.style.top = (top / H * 100) + '%';
-          b.style.width = (el.offsetWidth / Wd * 100) + '%';
-          b.style.height = (Math.max(h, 0) / H * 100) + '%';
+
+    /* --- Trabajos: texto de cada caso --- */
+    projects.forEach(function (p, i) { if (cine) gsap.set(p, { autoAlpha: i ? 0 : 1 }); });
+    var shown = 0;
+    function showProject(i) {
+      if (i === shown) return;
+      var out = projects[shown], inn = projects[i], dir = i > shown ? 1 : -1;
+      shown = i;
+      gsap.killTweensOf([out, inn, $$('[data-p]', out), $$('[data-p]', inn)]);
+      gsap.to($$('[data-p]', out), { autoAlpha: 0, y: -CONFIG.project.y * dir, duration: 0.35, ease: 'power2.in', stagger: 0.02 });
+      gsap.set(out, { autoAlpha: 0, delay: 0.4 });
+      gsap.set(inn, { autoAlpha: 1 });
+      gsap.fromTo($$('[data-p]', inn), { autoAlpha: 0, y: CONFIG.project.y * dir }, { autoAlpha: 1, y: 0, duration: 0.7, delay: 0.25, stagger: CONFIG.project.stagger, ease: 'power3.out' });
+    }
+    var worksBox = $('.works'), dots = $$('.works-dots li');
+    var tint = gsap.utils.interpolate(CONFIG.tints);
+    if (cine) ST.create({
+      trigger: '.works-pin', start: 'top top', end: function () { return pins.works.end; },
+      onUpdate: function (s) { dots.forEach(function (d, k) { d.style.setProperty('--p', clamp01(s.progress * 3 - k).toFixed(3)); }); }
+    });
+
+    /* --- Lienzo de escritorio + director --- */
+    if (cine && L) director = makeDirector(pins, showProject, function (p) { worksBox.style.backgroundColor = tint(clamp01(p / 2)); });
+
+    /* --- Móvil: el lienzo del hero pasa de boceto a diseño al bajar; resto de fases en su sitio --- */
+    if (!cine) {
+      var H = inline.hero;
+      if (H) {
+        H.extra = function (o) { H.set(o); };
+        intro(H);
+        var hs = { s: 1, w: 0, wt: 0, d: 0 };
+        ST.create({
+          trigger: '[data-slot="hero"]', start: 'center 80%', end: 'center 20%',
+          onUpdate: function (st) {
+            var t = st.progress;
+            H.set({ s: 1 - easeIO(seg(t, 0, .35)), w: seg(t, .15, .4), wt: seg(t, .1, .45), d: easeIO(seg(t, .45, .9)) });
+          }
         });
       }
-    };
-    W.place();
-    gsap.set(boxes, { scaleX: 0 });
-    gsap.set(blocks, { opacity: 0, y: 26, scale: 0.94 });
-    return W;
-  }
-
-  /* --- Objetos de cada cliente que salen de la pantalla --- */
-  function objSVG(type) {
-    if (type === 'flor') return '<svg viewBox="0 0 240 240" aria-hidden="true">' +
-      '<g fill="none" stroke="#5E7A55" stroke-width="5" stroke-linecap="round">' +
-      '<path class="o-stem" d="M120 236 C112 196 92 160 66 128"/><path class="o-stem" d="M120 236 C120 186 120 140 120 92"/><path class="o-stem" d="M120 236 C128 196 150 162 176 132"/></g>' +
-      '<path class="o-leaf" d="M118 214 C92 204 76 184 76 160 C100 170 114 190 118 214Z" fill="#6E9A63"/>' +
-      '<path class="o-leaf" d="M122 200 C148 190 164 170 164 146 C140 156 126 176 122 200Z" fill="#6E9A63"/>' +
-      '<path class="o-head" d="M66 132 C42 124 36 88 44 72 L55 88 L66 64 L77 88 L88 72 C96 88 90 124 66 132Z" fill="#E2486B"/>' +
-      '<path class="o-head" d="M120 96 C96 88 90 52 98 36 L109 52 L120 28 L131 52 L142 36 C150 52 144 88 120 96Z" fill="#F2B33D"/>' +
-      '<path class="o-head" d="M176 136 C152 128 146 92 154 76 L165 92 L176 68 L187 92 L198 76 C206 92 200 128 176 136Z" fill="#9A5BC9"/></svg>';
-    if (type === 'cafe') return '<svg viewBox="0 0 240 240" aria-hidden="true">' +
-      '<g class="o-steam" fill="none" stroke="#8A5A3C" stroke-width="6" stroke-linecap="round">' +
-      '<path d="M94 100 C80 82 108 70 94 48"/><path d="M120 94 C106 74 136 62 120 36"/><path d="M146 100 C132 82 160 70 146 48"/></g>' +
-      '<ellipse cx="120" cy="206" rx="92" ry="15" fill="#D9C7AA"/>' +
-      '<path d="M56 124 C58 176 86 200 120 200 C154 200 182 176 184 124 Z" fill="#FBF7F0" stroke="#24150F" stroke-width="5" stroke-linejoin="round"/>' +
-      '<path d="M182 138 C218 134 218 180 176 176" fill="none" stroke="#24150F" stroke-width="5" stroke-linecap="round"/>' +
-      '<ellipse cx="120" cy="124" rx="64" ry="14" fill="#6B3B22" stroke="#24150F" stroke-width="5"/></svg>';
-    return '<svg viewBox="0 0 240 240" aria-hidden="true"><g class="o-swing">' +
-      '<path d="M120 12 C134 12 136 30 124 34 L120 40" fill="none" stroke="#141414" stroke-width="5" stroke-linecap="round"/>' +
-      '<path d="M120 40 L36 82 L204 82 Z" fill="none" stroke="#141414" stroke-width="5" stroke-linejoin="round"/>' +
-      '<path d="M80 78 L120 104 L160 78 L198 104 L186 158 L168 152 L168 236 L72 236 L72 152 L54 158 L42 104 Z" fill="#B49673"/>' +
-      '<path d="M120 104 L104 146 L120 236 M120 104 L136 146 L120 236" fill="none" stroke="#8F7352" stroke-width="4" stroke-linejoin="round"/>' +
-      '<circle cx="129" cy="170" r="4.5" fill="#5F4A33"/><circle cx="129" cy="200" r="4.5" fill="#5F4A33"/></g></svg>';
-  }
-  function buildFx(box, types) {
-    var objs = types.map(function (t) {
-      var d = document.createElement('div');
-      d.className = 'obj obj--' + t;
-      d.innerHTML = objSVG(t);
-      box.appendChild(d);
-      if (t === 'flor') {
-        gsap.set($$('.o-stem', d), { scaleY: 0, transformOrigin: '50% 100%' });
-        gsap.set($$('.o-leaf', d), { scale: 0, transformOrigin: '50% 100%' });
-        gsap.set($$('.o-head', d), { scale: 0, transformOrigin: '50% 100%' });
-      } else if (t === 'cafe') {
-        gsap.set($$('.o-steam path', d), { opacity: 0, y: 12 });
-      } else {
-        gsap.set($('.o-swing', d), { rotate: -26, svgOrigin: '120 12' });
-      }
-      return d;
-    });
-    var mk = function (c) { var d = document.createElement('div'); d.className = c; box.appendChild(d); return d; };
-    return { objs: objs, finger: mk('tap-finger'), ripple: mk('tap-ripple'), flood: mk('flood') };
-  }
-  function addObjectMotion(tl, d, t, T) {
-    if (t === 'flor') {
-      tl.to($$('.o-stem', d), { scaleY: 1, duration: 0.45, stagger: 0.06, ease: 'power2.out' }, T)
-        .to($$('.o-leaf', d), { scale: 1, duration: 0.35, stagger: 0.06, ease: 'back.out(2)' }, T + 0.2)
-        .to($$('.o-head', d), { scale: 1, duration: 0.45, stagger: 0.08, ease: 'back.out(2.4)' }, T + 0.3)
-        .to($$('.o-head', d), { rotate: 7, duration: 0.35, stagger: 0.05, ease: 'sine.inOut' }, T + 0.8);
-    } else if (t === 'cafe') {
-      var steam = $$('.o-steam path', d);
-      tl.to(steam, { opacity: 0.9, y: -16, duration: 0.4, stagger: 0.12, ease: 'sine.out' }, T)
-        .to(steam, { opacity: 0, y: -48, duration: 0.45, stagger: 0.12, ease: 'sine.in' }, T + 0.45);
-    } else {
-      var sw = $('.o-swing', d);
-      tl.to(sw, { rotate: 16, duration: 0.35, ease: 'sine.inOut' }, T)
-        .to(sw, { rotate: -9, duration: 0.3, ease: 'sine.inOut' }, T + 0.35)
-        .to(sw, { rotate: 4, duration: 0.25, ease: 'sine.inOut' }, T + 0.65)
-        .to(sw, { rotate: 0, duration: 0.2, ease: 'sine.out' }, T + 0.9);
-    }
-  }
-
-  /* --- La historia de cada proyecto: boceto → web, objeto, toque que tiñe → siguiente --- */
-  function addStory(S) {
-    var tl = S.tl, N = S.screens.length;
-    function tapAt(i) {
-      var btn = $(TAP_BTN[i], S.screens[i]);
-      var c = S.center(), u = S.unit(), o = offsetIn(btn, S.screens[i]);
-      return { x: c.x - 14 * u + o.x + o.w / 2, y: c.y - 30 * u + o.y + o.h / 2 };
-    }
-    function coverAt(i) {
-      var t = tapAt(i), z = S.scene();
-      var R = Math.max(Math.hypot(t.x, t.y), Math.hypot(z.w - t.x, t.y), Math.hypot(t.x, z.h - t.y), Math.hypot(z.w - t.x, z.h - t.y));
-      return R * 2 / 20 * 1.06;
-    }
-    S.screens.forEach(function (screen, i) {
-      var W = S.wires[i], n = W.blocks.length, T = tl.duration();
-
-      // 1) Boceto → web: se dibujan las cajas, entra el color y cada bloque cae en su sitio
-      tl.to(W.boxes, { scaleX: 1, duration: 0.45, stagger: 0.05, ease: 'power3.out' }, T)
-        .to(S.wob, { ry: 0, rx: 0, duration: 1.6, ease: 'power1.inOut' }, T)
-        .to(W.paper, { opacity: 0, duration: 0.35, ease: 'none' }, T + 0.55)
-        .to(W.blocks, { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.8)' }, T + 0.8)
-        .to(W.boxes, { opacity: 0, duration: 0.25, stagger: 0.1 }, T + 0.8);
-      T += 0.8 + 0.1 * (n - 1) + 0.55;
-
-      // 2) El objeto del cliente sale de la pantalla
-      var obj = S.objs[i];
-      tl.fromTo(obj, { autoAlpha: 0, scale: 0.15, y: 0, rotate: -14 },
-        { autoAlpha: 1, scale: 1, y: function () { return -S.unit() * 8; }, rotate: 0, duration: 0.6, ease: 'back.out(1.5)', immediateRender: false }, T)
-        .to(S.wob, { ry: 14, rx: -6, duration: 0.55 }, T);
-      addObjectMotion(tl, obj, S.types[i], T + 0.25);
-      tl.to(obj, { autoAlpha: 0, scale: 1.35, y: function () { return -S.unit() * 16; }, duration: 0.45, ease: 'power2.in' }, T + 1.4)
-        .to(S.wob, { ry: 0, rx: 0, duration: 0.45 }, T + 1.4);
-      T += 1.9;
-
-      // 3) Un dedo pulsa el botón y el color del siguiente cliente inunda la escena
-      if (i < N - 1) {
-        var btn = $(TAP_BTN[i], screen);
-        var tx = function () { return tapAt(i).x; }, ty = function () { return tapAt(i).y; };
-        tl.fromTo(S.finger,
-          { x: function () { return tx() + S.unit() * 14; }, y: function () { return ty() + S.unit() * 24; }, autoAlpha: 0, scale: 1 },
-          { x: tx, y: ty, autoAlpha: 1, duration: 0.5, ease: 'power2.out', immediateRender: false }, T)
-          .to(S.finger, { scale: 0.75, duration: 0.12 }, T + 0.5)
-          .to(btn, { scale: 0.9, duration: 0.12 }, T + 0.5)
-          .to(S.finger, { scale: 1, duration: 0.15 }, T + 0.62)
-          .to(btn, { scale: 1, duration: 0.15 }, T + 0.62)
-          .fromTo(S.ripple, { x: tx, y: ty, scale: 0.3, autoAlpha: 0.9 },
-            { scale: 3, autoAlpha: 0, duration: 0.45, immediateRender: false }, T + 0.55)
-          .set(S.flood, { backgroundColor: TINTS[i + 1] }, T)
-          .fromTo(S.flood, { x: tx, y: ty, scale: 0, autoAlpha: 1 },
-            { scale: function () { return coverAt(i); }, duration: 0.7, ease: 'power2.in', immediateRender: false }, T + 0.62)
-          .to(S.finger, { autoAlpha: 0, duration: 0.2 }, T + 0.75);
-        S.swap(tl, i, T + 1.34);
-        tl.to(S.flood, { autoAlpha: 0, duration: 0.45, ease: 'none' }, T + 1.4);
-        S.reveal(tl, i + 1, T + 1.45);
-        tl.to({}, { duration: 0.05 }, T + 1.85);
-      }
-    });
-  }
-
-  var mm = gsap.matchMedia();
-  var introDone = false;
-
-  /* ============ ESCRITORIO: lluvia de pedidos en el inicio y el móvil viaja a Trabajos ============ */
-  mm.add(TRAVEL, function () {
-    root.classList.add('is-travel');
-    var stage = $('.stage');
-    var heroSlot = $('.hero-slot'), worksSlot = $('.works-slot'), pin = $('.works-pin');
-    var phone = buildStagePhone();
-    var shadow = document.createElement('div'); shadow.className = 'phone-shadow';
-    stage.appendChild(shadow); stage.appendChild(phone);
-    var screens = $$('.screen', phone);
-    // Copia acabada de la primera web para el inicio; se cambia por el boceto mientras el móvil gira
-    var heroScreen = screens[0].cloneNode(true);
-    heroScreen.classList.add('is-live');
-    $('.phone-screen', phone).appendChild(heroScreen);
-    var wires = screens.map(buildWire);
-    var projects = $$('.project');
-    var types = projects.map(function (p) { return p.dataset.project; });
-    var fx = buildFx(stage, types);
-    var rainBox = document.createElement('div');
-    stage.appendChild(rainBox);
-    var tints = $$('.works-tint');
-    var bar = $('.works-progress i');
-    var parts = function (i) { return $$('[data-p]', projects[i]); };
-
-    var wob = { ry: -20, rx: 10 };
-    var intro = { y: introDone ? 0 : 140, o: introDone ? 1 : 0, ry: introDone ? 0 : 40 };
-    var ptr = { x: 0, y: 0, tx: 0, ty: 0 };
-    var geo = { hx: 0, hy: 0, wx: 0, wy: 0, A: 1, B: 2, R: 0, vh: window.innerHeight, vw: window.innerWidth, u: 10 };
-    var pinST = null, rainST = null;
-
-    function measure() {
-      // Posición del móvil en el inicio con valores de maquetación (no cambia aunque el inicio esté fijado)
-      var h = offsetIn(heroSlot, null);
-      var p = pin.getBoundingClientRect();
-      var w = worksSlot.getBoundingClientRect();
-      geo.hx = h.x + h.w / 2; geo.hy = h.y + h.h / 2;
-      geo.wx = w.left + w.width / 2; geo.wy = w.top - p.top + w.height / 2;
-      geo.vh = window.innerHeight; geo.vw = window.innerWidth; geo.u = w.height / 62 || geo.u;
-      if (pinST) { geo.A = Math.max(1, pinST.start); geo.B = pinST.end; }
-      geo.R = rainST ? rainST.end : 0;
-      rainBox.style.fontSize = geo.u + 'px';
-      fx.objs.forEach(function (o) {
-        o.style.left = geo.wx + 'px'; o.style.top = geo.wy + 'px';
-        o.style.setProperty('--ow', Math.round(geo.u * 46) + 'px');
-      });
-      wires.forEach(function (W) { W.place(); });
-      return geo;
+      onLazy.project = function (lz) {
+        gsap.from(lz.el, { autoAlpha: 0, y: 30, scale: .96, duration: 1, scrollTrigger: { trigger: lz.el, start: 'top 88%', once: true } });
+      };
+      onLazy.launch = function (lz) { launchFX(lz, '[data-slot="launch"]'); };
+      ['flor', 'cafe', 'moda'].forEach(function (k) { if (inline[k]) onLazy.project(inline[k]); });
+      if (inline.launch) onLazy.launch(inline.launch);
+      // pasos del proceso: con la línea
+    } else if (director) {
+      intro(director.lz);
+      launchFX(director.lz, '.contact-slot');
     }
 
-    projects.forEach(function (p, i) { gsap.set(p, { autoAlpha: i ? 0 : 1 }); });
-    screens.forEach(function (s, i) { gsap.set(s, { autoAlpha: i ? 0 : 1 }); });
-
-    // Lluvia de pedidos: el inicio se queda fijo, el texto se aparta y el contador ocupa su sitio
-    var G = {
-      spread: 1,
-      totalAt: 1.5,
-      // En escritorio las notificaciones se reparten por arriba, abajo y a la derecha, sin tapar el contador
-      scatter: [[-0.32, -0.34, -9], [0.04, -0.37, 8], [-0.36, 0.33, 6], [0.0, 0.35, -7], [0.13, -0.04, -5], [0.37, -0.33, 9], [0.38, 0.31, 4]],
-      anchor: function () { measure(); return { x: geo.hx, y: geo.hy, u: geo.u }; },
-      size: function () { return { w: window.innerWidth, h: window.innerHeight }; },
-      total: function () { return { x: window.innerWidth * 0.3, y: window.innerHeight * 0.5 }; }
-    };
-    var rainTl = buildRain(rainBox, G);
-    rainTl.to('.hero-text', { autoAlpha: 0, y: -50, duration: 0.5, ease: 'power2.in' }, 1.0);
-    rainST = ST.create({
-      trigger: '.hero', start: 'top top', end: '+=150%', pin: true, scrub: 0.6,
-      animation: rainTl, invalidateOnRefresh: true
+    /* --- Servicios: cascada --- */
+    gsap.from('.service', {
+      autoAlpha: 0, x: CONFIG.services.x, duration: 1, stagger: CONFIG.services.stagger, ease: 'power3.out',
+      scrollTrigger: { trigger: '.services-grid', start: 'top 78%', once: true }
     });
 
-    var tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } });
-    tl.to({}, { duration: 0.2 });
-    addStory({
-      tl: tl, screens: screens, wires: wires, objs: fx.objs, finger: fx.finger, ripple: fx.ripple, flood: fx.flood,
-      wob: wob, types: types,
-      unit: function () { return measure().u; },
-      center: function () { measure(); return { x: geo.wx, y: geo.wy }; },
-      scene: function () { return { w: window.innerWidth, h: window.innerHeight }; },
-      swap: function (t, i, at) {
-        t.set(screens[i], { autoAlpha: 0 }, at).set(screens[i + 1], { autoAlpha: 1 }, at)
-          .set(tints[i], { opacity: 1 }, at)
-          .set(projects[i], { autoAlpha: 0 }, at).set(projects[i + 1], { autoAlpha: 1 }, at)
-          .set(wob, { ry: -20, rx: 10 }, at);
-      },
-      reveal: function (t, i, at) {
-        t.fromTo(parts(i), { y: 44, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.04, duration: 0.45, ease: 'power2.out', immediateRender: false }, at);
-      }
-    });
-    tl.to({}, { duration: 0.4 });
-    tl.to(bar, { scaleX: 1, ease: 'none', duration: tl.duration() }, 0);
-
-    pinST = ST.create({
-      trigger: pin, start: 'top top', end: '+=650%', pin: true, scrub: 0.5,
-      animation: tl, anticipatePin: 1, invalidateOnRefresh: true
-    });
-
-    ST.addEventListener('refresh', measure);
-    measure();
-
-    function onMove(e) {
-      ptr.tx = (e.clientX / window.innerWidth) * 2 - 1;
-      ptr.ty = (e.clientY / window.innerHeight) * 2 - 1;
-    }
-    if (finePointer) window.addEventListener('pointermove', onMove, { passive: true });
-
-    var ease = gsap.parseEase('power2.inOut');
-    var visible = true, heroHidden = false;
-    function tick(time) {
-      var s = scrollPos;
-      var gone = s > geo.B + geo.vh * 1.1;
-      if (gone !== !visible) {
-        visible = !gone;
-        phone.style.visibility = shadow.style.visibility = visible ? 'visible' : 'hidden';
-      }
-      if (!visible) return;
-      // El móvil se queda en el inicio durante la lluvia y luego viaja girando hasta Trabajos
-      var e = ease(clamp((s - geo.R) / Math.max(1, geo.A - geo.R), 0, 1)), free = 1 - e;
-      if (heroHidden !== (e > 0.5)) {
-        heroHidden = e > 0.5; // a mitad del giro (se ve la trasera) se cambia la web acabada por el boceto
-        heroScreen.style.visibility = heroHidden ? 'hidden' : '';
-        heroScreen.classList.toggle('is-live', !heroHidden);
-      }
-      ptr.x += (ptr.tx - ptr.x) * 0.07; ptr.y += (ptr.ty - ptr.y) * 0.07;
-      var x = lerp(geo.hx, geo.wx, e) + ptr.x * 14 * free;
-      var y = lerp(geo.hy, geo.wy, e) + Math.sin(time * 0.9) * 8 * free + intro.y;
-      if (s > geo.B) y -= s - geo.B;
-      var sc = lerp(1.08, 1, e);
-      var ry = lerp(-26, -360, e) + ptr.x * 12 * free + wob.ry * e + intro.ry;
-      var rx = lerp(9, 0, e) - ptr.y * 9 * free + wob.rx * e;
-      var rz = lerp(3, 0, e);
-      // Canto y trasera solo mientras el móvil está girado (de frente no se ven y cuestan fotogramas)
-      var flat = Math.cos(ry * Math.PI / 180) > 0.75;
-      if (flat !== phone._flat) { phone._flat = flat; phone.classList.toggle('is-flat', flat); }
-      phone.style.opacity = intro.o;
-      phone.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0) perspective(1500px) rotateX(' + rx.toFixed(2) +
-        'deg) rotateY(' + ry.toFixed(2) + 'deg) rotateZ(' + rz.toFixed(2) + 'deg) scale(' + sc.toFixed(4) + ')';
-      var squash = 0.45 + 0.55 * Math.abs(Math.cos(ry * Math.PI / 180));
-      shadow.style.opacity = intro.o * 0.9;
-      shadow.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + (y + geo.u * 33.5 * sc).toFixed(2) + 'px,0) scaleX(' + squash.toFixed(3) + ')';
-    }
-    gsap.ticker.add(tick);
-
-    var introTween = introDone ? null : gsap.to(intro, { y: 0, o: 1, ry: 0, duration: 1.6, ease: 'expo.out', delay: 0.35 });
-
-    return function () {
-      if (introTween) introTween.kill();
-      gsap.ticker.remove(tick);
-      ST.removeEventListener('refresh', measure);
-      window.removeEventListener('pointermove', onMove);
-      stage.innerHTML = '';
-      root.classList.remove('is-travel');
-      gsap.set(projects.concat($$('[data-p]'), [$('.hero-text')]), { clearProps: 'all' });
-      gsap.set(tints.concat([bar]), { clearProps: 'all' });
-    };
-  });
-
-  /* ============ MÓVIL / TABLET ============
-     Inicio: el móvil asoma inclinado y, al bajar, se queda fijo mientras llueven los pedidos.
-     Trabajos: escena fijada a pantalla completa con la misma historia (se monta al acercarse). */
-  mm.add('not all and ' + TRAVEL, function (context) {
-    root.classList.add('has-reel');
-    var slot = $('.hero-slot');
-    var visual = $('.hero-visual');
-    var heroPhone = $('.project .phone').cloneNode(true);
-    heroPhone.removeAttribute('role'); heroPhone.removeAttribute('aria-label');
-    slot.appendChild(heroPhone);
-
-    if (!introDone) {
-      gsap.fromTo(heroPhone,
-        { rotateY: -80, rotateX: 18, y: 160, autoAlpha: 0 },
-        { rotateY: 0, rotateX: 0, y: 0, autoAlpha: 1, duration: 1.8, ease: 'expo.out', delay: 0.35 });
-    }
-
-    // Lluvia de pedidos con el móvil fijo en el centro
-    var rainBox = document.createElement('div');
-    visual.appendChild(rainBox);
-    // Medidas guardadas: se leen una vez por recálculo, no en cada posición
-    var gc = { w: 390, h: 844, u: 9, cw: 243, ch: 56, total: null };
-    var G = {
-      spread: 1,
-      anchor: function () { return { x: gc.w / 2, y: gc.h / 2, u: gc.u }; },
-      size: function () { return { w: gc.w, h: gc.h }; },
-      card: function () { return { w: gc.cw, h: gc.ch }; },
-      total: function () {
-        var bottom = gc.h / 2 + 31 * gc.u;
-        return { x: gc.w / 2, y: bottom + (gc.h - bottom) / 2 };
-      }
-    };
-    var rainTl = buildRain(rainBox, G);
-    var firstCard = $('.notif', rainBox);
-    var cacheG = function () {
-      gc.u = parseFloat(getComputedStyle(heroPhone).fontSize) || 9;
-      rainBox.style.fontSize = gc.u + 'px';
-      gc.w = rainBox.offsetWidth; gc.h = rainBox.offsetHeight;
-      gc.cw = firstCard.offsetWidth; gc.ch = firstCard.offsetHeight;
-    };
-    ST.addEventListener('refreshInit', cacheG);
-    rainTl.fromTo(slot, { rotateY: -22, rotateX: 14, rotateZ: 4 }, { rotateY: 0, rotateX: 0, rotateZ: 0, duration: 0.6, ease: 'power1.out' }, 0);
-
-    // Lo que obliga a medir la página se prepara en tareas pequeñas aparte, para no bloquear la carga
-    var alive = true;
-    var later = function (fn) { setTimeout(function () { if (alive) context.add(fn); }, 0); };
-    later(function () {
-      cacheG();
-      ST.create({
-        trigger: visual, start: 'center center', end: '+=170%', pin: true, scrub: 0.6,
-        animation: rainTl, invalidateOnRefresh: true
-      });
-    });
-
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { en.target.classList.toggle('is-live', en.isIntersecting); });
-    }, { threshold: 0.2 });
-    io.observe(heroPhone);
-
-    later(function () {
-      $$('.project').forEach(function (p) {
-        gsap.from($$('[data-p]', p), { y: 28, autoAlpha: 0, duration: 0.9, stagger: 0.06, scrollTrigger: { trigger: p, start: 'top 82%', once: true } });
-      });
-    });
-
-    /* --- Escena de Trabajos --- */
-    var works = $('.works'), pinWrap = $('.works-pin');
-    var projects = $$('.project');
-    var types = projects.map(function (p) { return p.dataset.project; });
-    var names = projects.map(function (p) { return $('.project-name', p).textContent; });
-    var tagLines = projects.map(function (p) { return $$('.project-tags span', p).map(function (s) { return s.textContent; }).join(' · '); });
-    var N = projects.length;
-    var reel = document.createElement('div');
-    reel.className = 'reel';
-    reel.setAttribute('aria-hidden', 'true'); // el contenido real está en las tarjetas de debajo
-    reel.innerHTML =
-      '<i class="reel-tint reel-tint--cafe"></i><i class="reel-tint reel-tint--moda"></i>' +
-      '<p class="reel-count"><span class="reel-count-mask"><span class="reel-count-inner">' +
-        names.map(function (_, i) { return '<span>0' + (i + 1) + '</span>'; }).join('') +
-      '</span></span><span>/ 0' + N + '</span></p>' +
-      '<p class="reel-kicker">Trabajos</p>' +
-      '<div class="reel-shadow"></div><div class="reel-stage"></div>' +
-      '<div class="reel-caption">' + names.map(function () {
-        return '<div class="reel-item"><p class="reel-name"><span></span></p><p class="reel-tags"><span></span></p></div>';
-      }).join('') + '</div>' +
-      '<div class="reel-progress"><i></i></div>';
-    $$('.reel-item', reel).forEach(function (it, i) {
-      $('.reel-name span', it).textContent = names[i];
-      $('.reel-tags span', it).textContent = tagLines[i];
-    });
-    works.insertBefore(reel, pinWrap);
-
-    var wires = [];
-    var placeAll = function () { wires.forEach(function (W) { W.place(); }); };
-    ST.addEventListener('refresh', placeAll);
-
-    var built = false;
-    beforeJump = function () { if (!built) context.add(buildReel); };
-    later(function () {
-      ST.create({
-        trigger: reel, start: function () { return 'top bottom+=' + Math.round(window.innerHeight); }, end: 'max', once: true,
-        onEnter: function () { requestAnimationFrame(function () { if (alive) context.add(buildReel); }); }
-      });
-    });
-
-    function buildReel() {
-      if (built || !reel.isConnected) return;
-      built = true;
-      var phone = buildStagePhone();
-      phone.classList.add('is-flat'); // en esta escena el móvil nunca se gira lo bastante para verle el canto
-      $('.reel-stage', reel).appendChild(phone);
-      var screens = $$('.screen', phone);
-      wires = screens.map(buildWire);
-      var fx = buildFx(reel, types);
-      var tints = $$('.reel-tint', reel);
-      var items = $$('.reel-item', reel);
-      var countInner = $('.reel-count-inner', reel);
-      var bar = $('.reel-progress i', reel);
-      var ru = function () { return parseFloat(getComputedStyle(phone).fontSize); };
-      var wob = { ry: -20, rx: 10 };
-      var applyWob = function () { phone.style.transform = 'rotateY(' + wob.ry.toFixed(2) + 'deg) rotateX(' + wob.rx.toFixed(2) + 'deg)'; };
-
-      screens.forEach(function (s, i) { gsap.set(s, { autoAlpha: i ? 0 : 1 }); });
-      items.forEach(function (it, i) { if (i) gsap.set($$('span', it), { yPercent: 140 }); });
-      applyWob();
-
-      var tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, onUpdate: applyWob });
-      tl.to({}, { duration: 0.15 });
-      addStory({
-        tl: tl, screens: screens, wires: wires, objs: fx.objs, finger: fx.finger, ripple: fx.ripple, flood: fx.flood,
-        wob: wob, types: types,
-        unit: ru,
-        center: function () { return { x: reel.offsetWidth / 2, y: reel.offsetHeight * 0.45 }; },
-        scene: function () { return { w: reel.offsetWidth, h: reel.offsetHeight }; },
-        swap: function (t, i, at) {
-          t.set(screens[i], { autoAlpha: 0 }, at).set(screens[i + 1], { autoAlpha: 1 }, at)
-            .set(tints[i], { opacity: 1 }, at)
-            .set($$('span', items[i]), { yPercent: -140 }, at)
-            .set(countInner, { yPercent: -100 * (i + 1) / N }, at)
-            .set(wob, { ry: -20, rx: 10 }, at);
-        },
-        reveal: function (t, i, at) {
-          t.fromTo($$('span', items[i]), { yPercent: 140 }, { yPercent: 0, duration: 0.45, stagger: 0.06, ease: 'power3.out', immediateRender: false }, at);
-        }
-      });
-      tl.to({}, { duration: 0.3 });
-      tl.to(bar, { scaleX: 1, ease: 'none', duration: tl.duration() }, 0);
-
-      ST.create({
-        trigger: reel, start: 'top top', end: '+=560%', pin: true, scrub: 0.5,
-        animation: tl, anticipatePin: 1, invalidateOnRefresh: true
-      });
-      ST.refresh();
-    }
-
-    return function () {
-      alive = false;
-      io.disconnect();
-      ST.removeEventListener('refresh', placeAll);
-      ST.removeEventListener('refreshInit', cacheG);
-      heroPhone.remove();
-      rainBox.remove();
-      var spacer = reel.parentNode && reel.parentNode.classList.contains('pin-spacer') ? reel.parentNode : null;
-      reel.remove();
-      if (spacer) spacer.remove();
-      root.classList.remove('has-reel');
-      beforeJump = null;
-      gsap.set($$('[data-p]').concat([slot]), { clearProps: 'all' });
-    };
-  });
-
-  /* --- Hero: titular línea a línea --- */
-  fontsReady.then(function () {
-    var h1 = $('[data-split="hero"]');
-    revealTitle(h1, { delay: 0, stagger: 0.11 });
-    gsap.to('[data-hero-fade]', { opacity: 1, y: 0, duration: 1.1, stagger: 0.09, delay: 0.5, clearProps: 'transform' });
-    gsap.from('.site-header', { yPercent: -100, duration: 1, delay: 0.1, clearProps: 'transform' });
-    introDone = true;
-
-    /* Titulares de sección */
-    $$('[data-split]:not([data-split="hero"])').forEach(function (el) {
-      ST.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { revealTitle(el); } });
-    });
-    ST.refresh();
-
-    // Enlace directo a una sección (p. ej. /#contacto): recolocar con la altura definitiva
-    var hashTarget = location.hash.length > 1 && document.getElementById(location.hash.slice(1));
-    if (hashTarget) scrollToTarget(hashTarget, true);
-  });
-
-  /* --- Apariciones genéricas --- */
-  ST.batch('[data-reveal]', {
-    start: 'top 90%', once: true,
-    onEnter: function (els) { gsap.to(els, { opacity: 1, y: 0, duration: 1, stagger: 0.08, clearProps: 'transform' }); }
-  });
-  $$('[data-reveal-group]').forEach(function (group) {
-    gsap.to(group.children, {
-      opacity: 1, y: 0, duration: 1, stagger: 0.1, clearProps: 'transform',
-      scrollTrigger: { trigger: group, start: 'top 85%', once: true }
-    });
-  });
-
-  /* --- Proceso: línea de progreso y pasos --- */
-  (function () {
-    var track = $('.process-track');
-    if (!track) return;
-    var line = $('.process-line i'), steps = $$('.step', track);
-    var row = window.matchMedia('(min-width: 900px)');
-    var prop = function () { return row.matches ? 'scaleX' : 'scaleY'; };
-    var setter = null;
-    function build() { gsap.set(line, { clearProps: 'transform' }); gsap.set(line, row.matches ? { scaleX: 0 } : { scaleY: 0 }); setter = gsap.quickSetter(line, prop()); }
-    build();
-    row.addEventListener('change', function () { build(); ST.refresh(); });
+    /* --- Ventajas: contadores + barra de carga del lienzo --- */
+    var stats = $$('.stat-num');
+    stats.forEach(function (n) { n.textContent = '0'; });
     ST.create({
-      trigger: track, start: 'top 72%', end: 'bottom 55%', scrub: 0.6,
-      onUpdate: function (self) {
-        var p = self.progress;
-        setter(p);
-        steps.forEach(function (s, i) { s.classList.toggle('is-on', p >= i / steps.length + 0.02); });
-      }
-    });
-  })();
-
-  /* --- Titulares que se estiran y se inclinan con la velocidad del scroll --- */
-  (function () {
-    var els = $$('.title, .project-name, .stat dd');
-    var setters = els.map(function (el) {
-      return { sy: gsap.quickSetter(el, 'scaleY'), sk: gsap.quickSetter(el, 'skewY', 'deg') };
-    });
-    gsap.set(els, { transformOrigin: '0% 50%' });
-    var lastY = scrollPos, vel = 0, shown = 0;
-    gsap.ticker.add(function () {
-      var y = scrollPos, dy = y - lastY;
-      lastY = y;
-      vel += (dy - vel) * 0.18;
-      var a = clamp(vel / 45, -1, 1);
-      if (Math.abs(a - shown) < 0.002) return;
-      shown = a;
-      var sy = 1 + Math.abs(a) * 0.16, sk = -a * 3.5;
-      setters.forEach(function (s) { s.sy(sy); s.sk(sk); });
-    });
-  })();
-
-  /* --- Cifras con contador --- */
-  $$('[data-count]').forEach(function (el) {
-    var end = parseFloat(el.dataset.count), dec = parseInt(el.dataset.decimals || '0', 10);
-    var fmt = function (v) { return v.toFixed(dec).replace('.', ','); };
-    var o = { v: 0 };
-    el.textContent = fmt(0);
-    ST.create({
-      trigger: el, start: 'top 88%', once: true,
+      trigger: '.stats', start: 'top 78%', once: true,
       onEnter: function () {
-        gsap.to(o, { v: end, duration: 2.2, ease: 'power3.out', onUpdate: function () { el.textContent = fmt(o.v); } });
+        stats.forEach(function (n) {
+          var to = parseFloat(n.dataset.count), dec = parseInt(n.dataset.decimals || '0', 10), o = { v: 0 };
+          gsap.to(o, { v: to, duration: CONFIG.counter, ease: 'power2.out', onUpdate: function () { n.textContent = o.v.toFixed(dec).replace('.', ','); } });
+        });
+        var lz = director ? director.lz : null;
+        if (lz) { var e = { load: 0 }; gsap.to(e, { load: 1, duration: CONFIG.launch.load, ease: 'power1.inOut', onUpdate: function () { lz.extra(e); } }); }
       }
     });
-  });
 
-  /* --- Sobre mí: el texto se va "encendiendo" con el scroll --- */
-  $$('[data-words]').forEach(function (el) {
-    var text = el.textContent.trim();
-    el.innerHTML = text.split(/\s+/).map(function (w) { return '<span class="word">' + w + '</span>'; }).join(' ');
-    gsap.to($$('.word', el), {
-      opacity: 1, ease: 'none', stagger: 0.1,
-      scrollTrigger: { trigger: el, start: 'top 82%', end: 'bottom 55%', scrub: 0.4 }
-    });
-  });
+    /* --- Sobre mí: las palabras se encienden al leer --- */
+    var lead = $('[data-words]');
+    if (lead) {
+      lead.innerHTML = lead.textContent.trim().split(/\s+/).map(function (w) { return '<span class="word">' + w + '</span>'; }).join(' ');
+      gsap.fromTo($$('.word', lead), { opacity: 0.16 }, { opacity: 1, stagger: 0.05, ease: 'none', scrollTrigger: { trigger: lead, start: 'top 78%', end: 'bottom 50%', scrub: 0.4 } });
+    }
 
-  /* --- Transición al bloque de contacto --- */
-  gsap.from('.contact-panel', {
-    scale: 0.93, ease: 'none',
-    scrollTrigger: { trigger: '.contact', start: 'top bottom', end: 'top 35%', scrub: true }
-  });
-  gsap.from('.footer-word', {
-    yPercent: 60, ease: 'none',
-    scrollTrigger: { trigger: '.site-footer', start: 'top bottom', end: 'bottom bottom', scrub: true }
-  });
+    /* --- Pie: «rgdevstudio» gigante que se revela --- */
+    gsap.fromTo('.footer-word .fw', { yPercent: 102 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: '.site-footer', start: 'top bottom', end: 'bottom bottom', scrub: 0.5 } });
 
-  /* --- Microinteracciones de escritorio --- */
-  if (finePointer) {
-    /* Botones magnéticos */
-    $$('[data-magnetic]').forEach(function (el) {
-      var xTo = gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' });
-      var yTo = gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' });
+    /* --- Notas de la escena del boceto --- */
+    if (cine) {
+      gsap.timeline({ scrollTrigger: { trigger: '.build-pin', start: 'top top', end: function () { return pins.build.end; }, scrub: 0.5 } })
+        .fromTo('.build-note--1', { autoAlpha: 0, x: -30 }, { autoAlpha: 1, x: 0, duration: 0.2 }, 0.04)
+        .fromTo('.build-note--2', { autoAlpha: 0, x: 30 }, { autoAlpha: 1, x: 0, duration: 0.2 }, 0.42)
+        .to('.build-note', { autoAlpha: 0, y: -20, duration: 0.12 }, 0.88);
+    }
+
+    /* --- Botones magnéticos --- */
+    if (finePointer) $$('[data-magnetic]').forEach(function (el) {
+      var xTo = gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' }), yTo = gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' });
       el.addEventListener('pointermove', function (e) {
         var r = el.getBoundingClientRect();
-        xTo((e.clientX - (r.left + r.width / 2)) * 0.32);
-        yTo((e.clientY - (r.top + r.height / 2)) * 0.42);
+        xTo((e.clientX - (r.left + r.width / 2)) * CONFIG.magnetic);
+        yTo((e.clientY - (r.top + r.height / 2)) * CONFIG.magnetic * 1.3);
       });
-      el.addEventListener('pointerleave', function () {
-        gsap.to(el, { x: 0, y: 0, duration: 1, ease: 'elastic.out(1, 0.4)', overwrite: true });
-      });
+      el.addEventListener('pointerleave', function () { gsap.to(el, { x: 0, y: 0, duration: 1, ease: 'elastic.out(1, 0.4)', overwrite: true }); });
     });
-
-    /* Cursor personalizado */
-    var cursor = $('.cursor');
-    if (cursor) {
-      root.classList.add('has-cursor');
-      // El punto va pegado al ratón (sin retraso): se coloca en cuanto llega el movimiento
-      var shown = false;
-      window.addEventListener('pointermove', function (e) {
-        if (e.pointerType && e.pointerType !== 'mouse') return;
-        cursor.style.transform = 'translate3d(' + e.clientX + 'px,' + e.clientY + 'px,0)';
-        if (!shown) { shown = true; gsap.to(cursor, { opacity: 1, duration: 0.2 }); }
-      }, { passive: true });
-      document.addEventListener('pointerover', function (e) {
-        var t = e.target;
-        if (!t.closest) return;
-        cursor.classList.toggle('is-text', !!t.closest('input:not([type="radio"]), textarea'));
-        cursor.classList.toggle('is-hover', !!t.closest('a, button, summary, .choice'));
-      });
-      document.addEventListener('pointerleave', function () { shown = false; gsap.to(cursor, { opacity: 0, duration: 0.2 }); });
-    }
   }
 
-  window.addEventListener('load', function () { ST.refresh(); });
+  /* --- Lanzamiento: sello «Publicado» + confeti (una vez) --- */
+  function launchFX(lz, trigger) {
+    var e = { check: 0, conf: 0, load: 0 }, fired = false;
+    if (!lz.extra) lz.extra = function (o) { lz.set(o); };
+    ST.create({
+      trigger: trigger, start: 'top 72%',
+      onEnter: function () {
+        gsap.to(e, { check: 1, duration: CONFIG.launch.check, ease: 'none', delay: 0.15, onUpdate: function () { lz.extra({ check: e.check }); } });
+        if (!director) gsap.to(e, { load: 1, duration: CONFIG.launch.load, ease: 'none', onUpdate: function () { lz.extra({ load: e.load }); } });
+        if (!fired) { fired = true; gsap.fromTo(e, { conf: 0 }, { conf: 1, duration: CONFIG.launch.confetti, ease: 'power1.out', delay: 0.3, onUpdate: function () { lz.extra({ conf: e.conf }); } }); }
+      },
+      onLeaveBack: function () { gsap.to(e, { check: 0, duration: 0.3, onUpdate: function () { lz.extra({ check: e.check }); } }); }
+    });
+  }
+
+  /* --- Marquee: acelera con la velocidad del scroll --- */
+  var mqAnim = null, mqRate = 1;
+  function marqueeVelocity(v) {
+    if (!mqAnim) { var t = $('.marquee-track'); mqAnim = t && t.getAnimations ? t.getAnimations()[0] : null; if (!mqAnim) return; }
+    var target = 1 + Math.min(Math.abs(v || 0) / 12, CONFIG.marqueeBoost);
+    mqRate += (target - mqRate) * 0.15;
+    mqAnim.playbackRate = mqRate;
+  }
+
+  /* ==================================================================
+     5 · Director: coloca el lienzo fijo y decide su fase según el scroll
+     ================================================================== */
+  var director = null;
+  function makeDirector(pins, showProject, onProject) {
+    var stage = $('.lienzo-stage');
+    var lz = L.create();
+    stage.appendChild(lz.el);
+    var el = lz.el, W0 = 900;
+    var extras = { f: 0, sk: 0, load: 0, check: 0, conf: 0 };
+    lz.extra = function (o) { for (var k in o) extras[k] = o[k]; update(); };
+
+    var DOCKS = {
+      hero: '.hero-slot', build: '.build-slot', works: '.works-slot', services: '.services-slot', process: '.process-slot',
+      perks: '.perks-slot', about: '.about-slot', contact: '.contact-slot', logo: '.footer-mark'
+    };
+    Object.keys(DOCKS).forEach(function (k) { DOCKS[k] = $(DOCKS[k]); });
+    function dock(name, y) {
+      var r = DOCKS[name].getBoundingClientRect();
+      var o = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width };
+      if (name === 'hero') o.cy += y * CONFIG.heroParallax;
+      return o;
+    }
+
+    var tracks = {};
+    function key(at, props, ease) {
+      for (var p in props) (tracks[p] = tracks[p] || []).push({ at: at, v: props[p], e: ease || easeIO });
+    }
+    function sample(p, x) {
+      var T = tracks[p];
+      if (!T) return undefined;
+      if (x <= T[0].at) return { a: T[0].v, b: T[0].v, t: 0 };
+      for (var i = 0; i < T.length - 1; i++) {
+        if (x < T[i + 1].at) return { a: T[i].v, b: T[i + 1].v, t: T[i + 1].e(seg(x, T[i].at, T[i + 1].at)) };
+      }
+      var l = T[T.length - 1]; return { a: l.v, b: l.v, t: 0 };
+    }
+    function num(p, x) { var s = sample(p, x); return s ? lerp(s.a, s.b, s.t) : 0; }
+
+    var marks = {};
+    function mark(name, trigger, start, end) {
+      marks[name] = ST.create({ trigger: trigger, start: start, end: end || start });
+    }
+    mark('services', '.services', 'top 65%', 'bottom 70%');
+    mark('perks', '.perks', 'top 70%', 'bottom 55%');
+    mark('about', '.about', 'top 45%');
+    mark('faq', '.faq', 'top 80%', 'top 40%');
+    mark('contact', '.contact', 'top 70%', 'top 25%');
+    mark('footer', '.site-footer', 'top bottom');
+
+    function rebuild() {
+      tracks = {};
+      var B = pins.build, Wk = pins.works, Pr = pins.process;
+      var Lb = B.end - B.start, Lw = Wk.end - Wk.start;
+      var S0 = marks.services.start, S1 = marks.services.end;
+      var maxY = ST.maxScroll(window);
+
+      // hero → boceto
+      key(0, { dock: 'hero', o: 1, s: 1, w: 0, wt: 0, d: 0, p: 0, i: 0, url: 0, m: 0, tr: 0 });
+      // boceto → wireframe (pin)
+      key(B.start, { dock: 'build', s: 1, w: 0, wt: 0 });
+      key(B.start + Lb * 0.55, { s: 0 });
+      key(B.start + Lb * 0.4, { w: 0 }); key(B.start + Lb * 0.8, { w: 1 });
+      key(B.start + Lb * 0.18, { wt: 0 }); key(B.start + Lb * 0.85, { wt: 1 });
+      key(B.end, { dock: 'build', d: 0 });
+      // diseño + proyectos (pin)
+      key(Wk.start, { dock: 'works', d: 0.85, tr: 0 });
+      key(Wk.start + Lw * 0.1, { d: 1 });
+      key(Wk.start + Lw * 0.26, { p: 0 }); key(Wk.start + Lw * 0.4, { p: 1 });
+      key(Wk.start + Lw * 0.6, { p: 1 }); key(Wk.start + Lw * 0.74, { p: 2 });
+      key(Wk.end, { dock: 'works', p: 2, tr: 1 }, function (t) { return t; });
+      // interactivo (servicios)
+      key(S0, { dock: 'services', i: 0, tr: 0 });
+      key(S1, { dock: 'services', i: 1, p: 2, d: 1 });
+      // proceso: rebobina y repite las fases sincronizado con la línea
+      var T = threads.process, fr = [0.02, 0.27, 0.52, 0.77];
+      var proc = T && T.pieces[1] && T.pieces[1].steps ? T.pieces[1] : null;
+      var stepY = fr.map(function (f, k) {
+        var pp = proc ? lerp(proc.a, proc.b, proc.steps[k]) : f;
+        return T.st ? T.st.start + pp * (T.st.end - T.st.start) : Pr.start + f * (Pr.end - Pr.start);
+      });
+      var R1 = Math.max(stepY[0], S1 + 10), D = R1 - S1;
+      key(S1 + D * 0.35, { p: 0, i: 0, d: 1 });
+      key(S1 + D * 0.6, { s: 0, w: 1, wt: 1 });
+      key(S1 + D * 0.7, { d: 0 });
+      key(R1, { s: 1, w: 0, wt: 0, d: 0 });
+      key(Pr.start, { dock: 'process' });
+      var hold = function (k) { return stepY[k] - (stepY[k] - stepY[k - 1]) * 0.6; };
+      key(hold(1), { s: 1, w: 0, wt: 0 }); key(stepY[1], { s: 0, w: 1, wt: 1 });
+      key(hold(2), { d: 0 }); key(stepY[2], { d: 1 });
+      key(hold(3), { url: 0 }); key(stepY[3], { url: 1 });
+      key(Pr.end, { dock: 'process' });
+      // ventajas, sobre mí, FAQ (se esconde), contacto, logo
+      key(marks.perks.start, { dock: 'perks' });
+      key(marks.perks.end, { dock: 'perks' });
+      key(marks.about.start, { dock: 'about' });
+      key(marks.faq.start, { o: 1 }); key(marks.faq.end, { o: 0 });
+      key(marks.contact.start, { dock: 'about', o: 0 });
+      key(marks.contact.start + 1, { dock: 'contact' });
+      key(marks.contact.end, { o: 1 });
+      key(Math.min(marks.footer.start, maxY - 1), { dock: 'contact', m: 0 });
+      key(maxY, { dock: 'logo', m: 1 });
+
+      Object.keys(tracks).forEach(function (p) { tracks[p].sort(function (a, b) { return a.at - b.at; }); });
+
+      // tamaño base del lienzo = el mayor de sus huecos (así nunca se escala hacia arriba)
+      W0 = Math.max(DOCKS.build.offsetWidth, DOCKS.works.offsetWidth, DOCKS.services.offsetWidth, 300);
+      el.style.width = W0 + 'px'; el.style.height = (W0 / 1.6) + 'px';
+      last = null; update();
+    }
+
+    var last = null, lastP = -1, current = 0;
+    function update() {
+      var y = lenis ? lenis.animatedScroll : window.scrollY;
+      if (!tracks.dock) return;
+      var ds = sample('dock', y), A = dock(ds.a, y), Bd = ds.a === ds.b ? A : dock(ds.b, y);
+      var t = ds.t, cx = lerp(A.cx, Bd.cx, t), cy = lerp(A.cy, Bd.cy, t), w = lerp(A.w, Bd.w, t);
+      var o = num('o', y);
+      var k = w / W0, x = cx - w / 2, yy = cy - (w / 1.6) / 2;
+      var tf = 'translate3d(' + x.toFixed(1) + 'px,' + yy.toFixed(1) + 'px,0) scale(' + k.toFixed(4) + ')';
+      if (tf !== last) { el.style.transform = tf; last = tf; }
+      el.style.opacity = o.toFixed(3);
+      el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+
+      var s = { s: num('s', y), w: num('w', y), wt: num('wt', y), d: num('d', y), p: num('p', y), i: num('i', y), url: num('url', y), m: num('m', y), tr: num('tr', y) };
+      for (var e in extras) s[e] = extras[e];
+      lz.set(s);
+      if (s.p !== lastP) {
+        lastP = s.p; onProject(s.p);
+        var idx = s.p < 0.5 ? 0 : s.p < 1.5 ? 1 : 2;
+        if (idx !== current) { current = idx; showProject(idx); }
+      }
+    }
+
+    ST.create({ start: 0, end: 'max', onUpdate: update });
+    window.addEventListener('resize', function () { last = null; });
+    return { lz: lz, rebuild: rebuild, update: update };
+  }
 })();

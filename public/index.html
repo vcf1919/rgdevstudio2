@@ -24,17 +24,17 @@
   <link rel="preload" href="/fonts/lora-roman.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/newsreader-italic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/archivo-sans.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/styles.css?v=10">
+  <link rel="stylesheet" href="/css/styles.css?v=20">
 
   <script>
-    /* Antes del primer pintado: hay JS y se decide el modo de animación (evita saltos de maquetación).
-       "is-cine": escritorio con el lienzo fijo y la línea completa. Si el JS no arranca en 4 s, se muestra todo. */
+    /* Antes del primer pintado: hay JS y se decide el modo (evita saltos de maquetación).
+       is-desk: escritorio (≥1024×600) · is-reduced: prefers-reduced-motion.
+       Si el JS no arranca en 4 s, se quita "js" y la web queda completa y estática. */
     (function () {
       var d = document.documentElement, m = function (q) { return window.matchMedia(q).matches; };
       d.classList.add('js');
       if (m('(prefers-reduced-motion: reduce)')) d.classList.add('is-reduced');
-      else if (m('(min-width: 1024px) and (min-height: 600px)')) d.classList.add('is-cine');
-      setTimeout(function () { if (!window.__rgReady) d.classList.remove('js', 'is-cine'); }, 4000);
+      setTimeout(function () { if (!window.__rgReady) d.classList.remove('js'); }, 4000);
     })();
   </script>
 
@@ -56,14 +56,13 @@
   <script src="/vendor/gsap.min.js" defer></script>
   <script src="/vendor/ScrollTrigger.min.js" defer></script>
   <script src="/vendor/lenis.min.js" defer></script>
-  <script src="/js/lienzo.js?v=10" defer></script>
-  <script src="/js/main.js?v=10" defer></script>
+  <script src="/js/main.js?v=20" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-  <!-- El lienzo fijo de escritorio (lo monta el JS). Es decorativo: todo su contenido está también en el texto. -->
-  <div class="lienzo-stage" aria-hidden="true"></div>
+  <!-- Escenario fijo de la pieza (el JS mueve aquí la pieza del hero). Decorativo. -->
+  <div class="stage" aria-hidden="true"></div>
 
   <header class="site-header">
     <div class="header-inner">
@@ -104,138 +103,211 @@
 
   <main id="contenido">
 
-    <!-- ============ HERO · fase 1: boceto ============ -->
-    <section class="hero" id="inicio" aria-labelledby="hero-title" data-thread="hero">
-      <div class="container hero-grid">
-        <div class="hero-text">
-          <p class="kicker hero-kicker" data-hero-fade>Diseño web para negocios locales</p>
-          <h1 class="hero-title" id="hero-title"><span class="l"><span>Tu negocio</span></span> <span class="l"><span>merece una web</span></span> <span class="l"><span>que esté</span></span> <span class="l"><span><em>a su altura</em></span></span></h1>
-          <p class="hero-sub" data-hero-fade>Diseño y desarrollo landings y tiendas online a medida, sin plantillas y hablando siempre conmigo.</p>
-          <div class="hero-ctas" data-hero-fade>
-            <a class="btn btn--accent" href="#contacto" data-magnetic>Hablemos de tu proyecto</a>
-            <a class="btn btn--line" href="#trabajos" data-magnetic>Ver trabajos</a>
-          </div>
-        </div>
-        <div class="hero-slot lienzo-slot" data-slot="hero" aria-hidden="true"></div>
-      </div>
-    </section>
-
-    <!-- ============ Transición · fase 2: wireframe (anticipa los pasos 1 y 2 del proceso) ============ -->
-    <div class="build" aria-hidden="true" data-thread="build">
-      <div class="build-pin">
-        <p class="build-note build-note--1"><span>1</span> Hablamos</p>
-        <p class="build-note build-note--2"><span>2</span> Te propongo</p>
-        <div class="build-slot"></div>
-      </div>
-    </div>
-
-    <!-- ============ TRABAJOS · fase 3: diseño ============ -->
-    <section class="works" id="trabajos" aria-labelledby="works-title">
-      <div class="works-pin" data-thread="works">
-        <div class="container works-grid">
-          <div class="works-col">
-            <header class="works-head">
-              <p class="kicker" data-reveal>Trabajos</p>
-              <h2 class="title" id="works-title" data-split>Algunos <em>proyectos</em></h2>
-              <p class="lead" data-reveal>Cada negocio es distinto, y cada web también.</p>
-            </header>
-
-            <div class="projects">
-              <article class="project" data-project="argila">
-                <div class="project-text">
-                  <p class="project-num" data-p>01 / 03</p>
-                  <h3 class="project-name" data-p>Taller Argila</h3>
-                  <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Cerámica</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Un taller de cerámica artesanal que vende en ferias y por mensajes. Cada pieza es única y el stock cambia cada semana, así que tener una tienda al día parecía imposible.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify pensada para piezas únicas: fotos de detalle, medidas claras y aviso cuando una pieza se agota. Subir una pieza nueva desde el móvil lleva un minuto.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una tienda online puede tener el carácter del taller sin perder sencillez.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="argila" aria-hidden="true"></div>
-              </article>
-
-              <article class="project" data-project="cafe">
-                <div class="project-text">
-                  <p class="project-num" data-p>02 / 03</p>
-                  <h3 class="project-name" data-p>Molí Café</h3>
-                  <p class="project-tags" data-p><span>Landing</span><span class="tag-concept">Concepto</span><span>Cafetería</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Una cafetería de barrio que se llena por recomendación pero casi no aparece en Google. La gente busca horario, carta y cómo llegar, y no lo encuentra.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una landing de una sola página: carta visible sin PDFs, horario y mapa a un toque y botón para reservar mesa por WhatsApp. Pensada para leerse en el móvil, de pie en la calle.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una web sencilla responde en segundos a lo que un cliente busca antes de entrar.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="cafe" aria-hidden="true"></div>
-              </article>
-
-              <article class="project" data-project="moda">
-                <div class="project-text">
-                  <p class="project-num" data-p>03 / 03</p>
-                  <h3 class="project-name" data-p>Atelier Nou</h3>
-                  <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Moda</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Una tienda de moda local que vende por Instagram y gestiona los pedidos a mano, mensaje a mensaje.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify con estética editorial: fotos grandes, tallas y stock claros y un pago sencillo. Los pedidos llegan ordenados y se cobran al momento.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Explora cómo llevar la identidad de una tienda física a internet sin que parezca una plantilla.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="moda" aria-hidden="true"></div>
-              </article>
+    <!-- ============ HERO · la web montada; con el primer scroll se separa en capas ============ -->
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
+      <div class="hero-inner">
+        <div class="container hero-grid">
+          <div class="hero-text">
+            <p class="kicker hero-kicker" data-hero-fade>Diseño web para negocios locales</p>
+            <h1 class="hero-title" id="hero-title"><span class="l"><span>Tu negocio</span></span> <span class="l"><span>merece una web</span></span> <span class="l"><span>que esté</span></span> <span class="l"><span><em>a su altura</em></span></span></h1>
+            <p class="hero-sub" data-hero-fade>Diseño y desarrollo landings y tiendas online a medida, sin plantillas y hablando siempre conmigo.</p>
+            <div class="hero-ctas" data-hero-fade>
+              <a class="btn btn--accent" href="#contacto" data-magnetic>Hablemos de tu proyecto</a>
+              <a class="btn btn--line" href="#trabajos" data-magnetic>Ver trabajos</a>
             </div>
           </div>
-          <div class="works-slot" aria-hidden="true">
-            <ol class="works-dots"><li></li><li></li><li></li></ol>
+          <div class="slot hero-slot" data-slot="hero" aria-hidden="true">
+            <!-- LA PIEZA: la web de un cliente en 5 capas (Fondo, Imagen, Tipografía, Interfaz, Comercio).
+                 Variantes de contenido: v0 = «tu negocio» (marca), v1 Taller Argila, v2 Molí Café, v3 Atelier Nou. -->
+            <div class="pz-wrap">
+              <div class="pz-light"></div>
+              <div class="pz-float">
+                <div class="pz-tilt">
+                  <div class="pz" data-scene="hero" data-v="0" data-com="1">
+                    <i class="pz-ground"></i>
+                    <div class="pz-frame"><span class="pz-dots"><i></i><i></i><i></i></span><span class="pz-notch"></span></div>
+
+                    <div class="ly ly--bg">
+                      <div class="lc">
+                        <i class="var bg bg0"></i><i class="var bg bg1"></i><i class="var bg bg2"></i><i class="var bg bg3"></i>
+                        <i class="sheen"></i>
+                        <span class="long"><i></i><i></i><i></i></span>
+                        <span class="notes"><b class="note n1">logo aquí</b><b class="note n2">foto grande</b><b class="note n3">botón de WhatsApp</b></span>
+                        <span class="speed"><b>0,8<em>s</em></b><small>Carga en móvil</small></span>
+                        <span class="loadbar"><i></i></span>
+                      </div>
+                      <span class="tag tag--load">Carga · 0,8 s</span>
+                    </div>
+
+                    <div class="ly ly--img">
+                      <i class="sh sh--img"></i>
+                      <div class="lc">
+                        <div class="img">
+                          <svg class="var" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice"><rect width="160" height="120" fill="#E7E1D3"/><circle cx="121" cy="33" r="19" fill="#F0561D"/><path d="M0 92 Q40 76 80 86 T160 80 V120 H0Z" fill="#D8D0BF"/><rect x="30" y="44" width="70" height="58" rx="2" fill="#F8F7F3"/><path d="M25 44 h80 l-7 11 h-66z" fill="#121214"/><rect x="40" y="66" width="18" height="36" fill="#121214"/><rect x="66" y="64" width="24" height="17" rx="2" fill="#E4E1D9"/></svg>
+                          <svg class="var" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice"><rect width="160" height="120" fill="#CFA587"/><rect y="90" width="160" height="30" fill="#B98A6C"/><path d="M38 92 C24 84 26 58 36 50 L34 40 h17 l-2 10 C59 58 61 84 47 92Z" fill="#8E4F33"/><path d="M80 92 C64 88 62 66 73 60 C69 52 71 45 81 45 C91 45 93 52 89 60 C100 66 98 88 82 92Z" fill="#EFE2D2"/><path d="M116 92 C107 90 104 76 109 69 h16 c5 7 2 21 -6 23Z" fill="#A9664A"/></svg>
+                          <svg class="var" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice"><rect width="160" height="120" fill="#5A3E2D"/><rect y="96" width="160" height="24" fill="#4A3224"/><ellipse cx="80" cy="96" rx="46" ry="9" fill="#E9D8C0"/><path d="M52 60 h56 v14 c0 14 -12 22 -28 22 s-28 -8 -28 -22z" fill="#F6EEE2"/><path d="M107 64 c13 0 13 17 0 17" fill="none" stroke="#F6EEE2" stroke-width="5"/><ellipse cx="80" cy="60" rx="28" ry="5" fill="#2A1A10"/><path d="M70 48 c-6 -8 6 -12 0 -22 M86 48 c-6 -8 6 -12 0 -22" stroke="#C9A98A" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+                          <svg class="var" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice"><rect width="160" height="120" fill="#D9D4CA"/><rect x="106" width="54" height="120" fill="#C6C0B4"/><path d="M76 18 a5 5 0 1 1 5 5 v5" stroke="#121214" stroke-width="2" fill="none"/><path d="M57 41 L81 28 L105 41" stroke="#121214" stroke-width="2" fill="none"/><path d="M60 41 L81 34 L102 41 L113 112 H49Z" fill="#1F1D1B"/><path d="M81 36 L75 72 L81 112 L87 72Z" fill="#3B3834"/></svg>
+                          <span class="wf"></span>
+                        </div>
+                      </div>
+                      <span class="tag">Imagen · WebP 60 KB</span>
+                    </div>
+
+                    <div class="ly ly--txt">
+                      <i class="sh sh--txt"></i>
+                      <div class="lc">
+                        <div class="txt">
+                          <span class="var"><b class="k">Negocio local</b><b class="t">Tu <em>negocio</em></b></span>
+                          <span class="var"><b class="k">Cerámica artesanal</b><b class="t">Taller <em>Argila</em></b></span>
+                          <span class="var"><b class="k">Café de barrio</b><b class="t">Molí <em>Café</em></b></span>
+                          <span class="var"><b class="k">Moda local</b><b class="t">Atelier <em>Nou</em></b></span>
+                          <span class="bars"><i></i><i></i><i></i></span>
+                          <span class="wf"><i></i><i></i><i></i><i></i></span>
+                        </div>
+                      </div>
+                      <span class="tag">Tipografía · Lora</span>
+                    </div>
+
+                    <div class="ly ly--ui">
+                      <i class="sh sh--ui"></i>
+                      <div class="lc">
+                        <span class="nav"><i class="dot"></i><span class="links"><i></i><i></i><i></i></span></span>
+                        <span class="cta">
+                          <b class="var btn">Hablemos</b><b class="var btn">Ver piezas</b><b class="var btn">Reservar mesa</b><b class="var btn">Comprar</b>
+                          <span class="wf"></span>
+                        </span>
+                        <span class="price">
+                          <b class="var">Abierto hoy</b><b class="var">48 €</b><b class="var">Ver carta</b><b class="var">120 €</b>
+                          <span class="wf"></span>
+                        </span>
+                        <b class="ok"><i>✓</i> Actualizado</b>
+                      </div>
+                      <span class="tag">Botón · 44 px</span>
+                    </div>
+
+                    <div class="ly ly--com">
+                      <i class="sh sh--com"></i>
+                      <div class="lc">
+                        <span class="cards"><span class="card"><i></i><b></b><em>48 €</em></span><span class="card"><i></i><b></b><em>36 €</em></span></span>
+                        <span class="cart"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 11.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8z M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><b class="cart-n"><i>0</i><i>1</i></b></span>
+                        <span class="drop"><i></i></span>
+                        <b class="paid"><i>✓</i> Pago completado</b>
+                      </div>
+                      <span class="tag">Pago · Shopify</span>
+                    </div>
+
+                    <span class="pz-url"><span><svg viewBox="0 0 12 12"><path d="M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5M2.5 5.5h7v5h-7z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>tunegocio.es</span><i class="pz-load"></i></span>
+                    <b class="pz-stamp">Publicado</b>
+                    <svg class="pz-mono" viewBox="0 0 125.8 83.8"><path fill="currentColor" fill-rule="evenodd" d="M57.5 49.0 L57.5 49.4 L86.6 82.8 L91.8 83.6 L97.5 83.7 L102.5 83.1 L107.0 82.0 L111.7 80.2 L117.1 77.3 L122.6 73.3 L125.7 70.3 L125.7 39.5 L92.8 39.5 L92.9 49.8 L115.1 49.9 L115.2 65.7 L111.2 68.8 L107.6 70.7 L103.2 72.3 L98.8 73.2 L96.6 73.4 L92.6 73.3 L89.2 72.7 L86.3 71.8 L83.0 70.3 L79.8 68.3 L77.8 66.7 L75.3 64.2 L71.7 59.2 L69.3 53.7 L68.0 48.5 L67.6 45.3 L67.5 41.7 L64.6 44.6 L62.2 46.5 L59.6 48.1ZM123.6 15.5 L120.7 11.8 L117.2 8.4 L112.7 5.1 L107.4 2.4 L102.2 0.8 L97.6 0.1 L92.4 0.0 L87.1 0.7 L82.2 2.1 L77.5 4.2 L73.6 6.6 L69.5 9.8 L65.8 13.8 L63.0 18.0 L60.8 22.6 L58.3 29.4 L57.2 31.3 L54.6 34.0 L52.1 35.5 L48.6 36.4 L10.6 36.4 L10.5 13.5 L10.7 12.6 L49.0 12.7 L51.9 13.6 L53.8 14.7 L55.9 16.6 L57.6 19.3 L57.8 19.3 L60.1 14.6 L63.7 9.8 L60.8 7.0 L57.3 4.7 L53.4 3.1 L49.4 2.3 L0.1 2.2 L0.1 83.1 L10.5 83.1 L10.5 47.1 L10.7 46.9 L35.7 46.9 L67.4 83.1 L80.8 83.1 L49.7 46.9 L53.0 46.2 L56.4 44.9 L59.4 43.2 L62.2 41.0 L64.3 38.8 L66.6 35.5 L68.0 32.7 L70.5 25.9 L71.9 23.3 L74.0 20.3 L76.5 17.6 L78.5 15.9 L81.3 14.0 L84.4 12.4 L89.4 10.8 L93.1 10.3 L96.8 10.4 L101.3 11.3 L105.3 12.9 L110.1 16.0 L113.0 18.7 L115.8 22.4 L116.1 22.4Z"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ============ SERVICIOS · fase 4: interactivo ============ -->
-    <section class="section services" id="servicios" aria-labelledby="services-title" data-thread="services">
-      <div class="container services-layout">
+    <!-- ============ TRABAJOS · las capas cambian de proyecto ============ -->
+    <section class="works" id="trabajos" aria-labelledby="works-title" data-p="1">
+      <div class="tints" aria-hidden="true"><i class="tint tint--1"></i><i class="tint tint--2"></i><i class="tint tint--3"></i></div>
+      <div class="container">
+        <header class="section-head works-head">
+          <p class="kicker" data-reveal>Trabajos</p>
+          <h2 class="title" id="works-title" data-split>Algunos <em>proyectos</em></h2>
+          <p class="lead" data-reveal>Cada negocio es distinto, y cada web también.</p>
+        </header>
+
+        <div class="scene">
+          <div class="band works-band" aria-hidden="true">
+            <div class="tints"><i class="tint tint--1"></i><i class="tint tint--2"></i><i class="tint tint--3"></i></div>
+            <div class="slot" data-slot="works"></div>
+            <ol class="works-dots"><li></li><li></li><li></li></ol>
+          </div>
+
+          <div class="projects">
+            <article class="project" data-project="1">
+              <p class="project-num" data-p>01 / 03</p>
+              <h3 class="project-name" data-p>Taller Argila</h3>
+              <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Cerámica</span></p>
+              <dl class="project-case">
+                <div data-p><dt>El reto</dt><dd>Un taller de cerámica artesanal que vende en ferias y por mensajes. Cada pieza es única y el stock cambia cada semana, así que tener una tienda al día parecía imposible.</dd></div>
+                <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify pensada para piezas únicas: fotos de detalle, medidas claras y aviso cuando una pieza se agota. Subir una pieza nueva desde el móvil lleva un minuto.</dd></div>
+                <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una tienda online puede tener el carácter del taller sin perder sencillez.</dd></div>
+              </dl>
+            </article>
+
+            <article class="project" data-project="2">
+              <p class="project-num" data-p>02 / 03</p>
+              <h3 class="project-name" data-p>Molí Café</h3>
+              <p class="project-tags" data-p><span>Landing</span><span class="tag-concept">Concepto</span><span>Cafetería</span></p>
+              <dl class="project-case">
+                <div data-p><dt>El reto</dt><dd>Una cafetería de barrio que se llena por recomendación pero casi no aparece en Google. La gente busca horario, carta y cómo llegar, y no lo encuentra.</dd></div>
+                <div data-p><dt>Lo que hice</dt><dd>Una landing de una sola página: carta visible sin PDFs, horario y mapa a un toque y botón para reservar mesa por WhatsApp. Pensada para leerse en el móvil, de pie en la calle.</dd></div>
+                <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una web sencilla responde en segundos a lo que un cliente busca antes de entrar.</dd></div>
+              </dl>
+            </article>
+
+            <article class="project" data-project="3">
+              <p class="project-num" data-p>03 / 03</p>
+              <h3 class="project-name" data-p>Atelier Nou</h3>
+              <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Moda</span></p>
+              <dl class="project-case">
+                <div data-p><dt>El reto</dt><dd>Una tienda de moda local que vende por Instagram y gestiona los pedidos a mano, mensaje a mensaje.</dd></div>
+                <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify con estética editorial: fotos grandes, tallas y stock claros y un pago sencillo. Los pedidos llegan ordenados y se cobran al momento.</dd></div>
+                <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Explora cómo llevar la identidad de una tienda física a internet sin que parezca una plantilla.</dd></div>
+              </dl>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SERVICIOS · la pila se reordena según la oferta ============ -->
+    <section class="section services" id="servicios" aria-labelledby="services-title">
+      <div class="container">
         <header class="section-head">
           <p class="kicker" data-reveal>Servicios</p>
           <h2 class="title" id="services-title" data-split>¿Qué <em>necesitas</em>?</h2>
         </header>
-        <div class="services-grid">
-          <article class="service" data-anchor>
-            <p class="service-time">1–2 semanas</p>
-            <h3 class="service-name">Landing</h3>
-            <p class="service-desc">Una página clara y bonita para presentar tu negocio y que te contacten. Ideal si empiezas o si tu web actual no te trae clientes.</p>
-            <p class="service-price"><small>Desde</small> 300 €</p>
-            <a class="service-link" href="#contacto" data-service="Landing"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
-          </article>
-          <article class="service service--feature" data-anchor>
-            <p class="service-time">3–5 semanas</p>
-            <h3 class="service-name">Tienda online</h3>
-            <p class="service-desc">Vende tus productos por internet con una tienda en Shopify diseñada a medida. Te la dejo lista para vender y te enseño a gestionarla tú solo.</p>
-            <p class="service-price">A medida <small>· presupuesto cerrado</small></p>
-            <a class="service-link" href="#contacto" data-service="Tienda"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
-          </article>
-          <article class="service" data-anchor>
-            <p class="service-time">Cada mes</p>
-            <h3 class="service-name">Mantenimiento</h3>
-            <p class="service-desc">Me encargo de que tu web siga funcionando, actualizada y segura. Si necesitas un cambio, me escribes y listo.</p>
-            <p class="service-price">30 € <small>/ mes</small></p>
-            <a class="service-link" href="#contacto" data-service="Otro"><span>Preguntar</span> <i aria-hidden="true">→</i></a>
-          </article>
+        <div class="scene scene--flip">
+          <div class="band services-band" aria-hidden="true"><div class="slot" data-slot="services"></div></div>
+          <div class="services-grid">
+            <article class="service" data-svc="landing">
+              <p class="service-time">1–2 semanas</p>
+              <h3 class="service-name">Landing</h3>
+              <p class="service-desc">Una página clara y bonita para presentar tu negocio y que te contacten. Ideal si empiezas o si tu web actual no te trae clientes.</p>
+              <p class="service-price"><small>Desde</small> 300 €</p>
+              <a class="service-link" href="#contacto" data-service="Landing"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
+            </article>
+            <article class="service service--feature" data-svc="shop">
+              <p class="service-time">3–5 semanas</p>
+              <h3 class="service-name">Tienda online</h3>
+              <p class="service-desc">Vende tus productos por internet con una tienda en Shopify diseñada a medida. Te la dejo lista para vender y te enseño a gestionarla tú solo.</p>
+              <p class="service-price">A medida <small>· presupuesto cerrado</small></p>
+              <a class="service-link" href="#contacto" data-service="Tienda"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
+            </article>
+            <article class="service" data-svc="care">
+              <p class="service-time">Cada mes</p>
+              <h3 class="service-name">Mantenimiento</h3>
+              <p class="service-desc">Me encargo de que tu web siga funcionando, actualizada y segura. Si necesitas un cambio, me escribes y listo.</p>
+              <p class="service-price">30 € <small>/ mes</small></p>
+              <a class="service-link" href="#contacto" data-service="Otro"><span>Preguntar</span> <i aria-hidden="true">→</i></a>
+            </article>
+          </div>
         </div>
-        <div class="services-aside" aria-hidden="true"><div class="services-slot"></div></div>
       </div>
     </section>
 
-    <!-- ============ PROCESO · replay de las fases ============ -->
+    <!-- ============ PROCESO · 4 pasos sincronizados con el montaje ============ -->
     <section class="section process" id="proceso" aria-labelledby="process-title">
-      <div class="process-pin" data-thread="process">
-        <div class="container process-layout">
-          <div class="process-side">
-            <header class="section-head">
-              <p class="kicker" data-reveal>Proceso</p>
-              <h2 class="title" id="process-title" data-split>Así <em>trabajamos</em></h2>
-            </header>
-            <div class="process-slot" aria-hidden="true"></div>
-          </div>
+      <div class="container">
+        <header class="section-head">
+          <p class="kicker" data-reveal>Proceso</p>
+          <h2 class="title" id="process-title" data-split>Así <em>trabajamos</em></h2>
+        </header>
+        <div class="scene">
+          <div class="band process-band" aria-hidden="true"><div class="slot" data-slot="process"></div></div>
           <ol class="steps">
             <li class="step"><span class="step-num">1</span><div><h3>Hablamos</h3><p>Me cuentas tu negocio y qué necesitas. Sin compromiso.</p></div></li>
             <li class="step"><span class="step-num">2</span><div><h3>Te propongo</h3><p>Recibes un presupuesto claro, con plazos y lo que incluye.</p></div></li>
@@ -246,25 +318,25 @@
       </div>
     </section>
 
-    <!-- ============ VENTAJAS ============ -->
-    <section class="section perks" id="ventajas" aria-labelledby="perks-title" data-thread="perks">
+    <!-- ============ VENTAJAS · la capa «Carga · 0,8 s» se adelanta ============ -->
+    <section class="section perks" id="ventajas" aria-labelledby="perks-title">
       <div class="container">
         <header class="section-head">
           <p class="kicker" data-reveal>Ventajas</p>
           <h2 class="title" id="perks-title" data-split>Por qué <em>conmigo</em></h2>
         </header>
         <div class="stats-row">
+          <div class="slot perks-slot" data-slot="perks" aria-hidden="true"></div>
           <dl class="stats">
-          <div class="stat" data-reveal data-anchor>
-            <dt>de carga</dt>
-            <dd><span class="stat-num" data-count="0.8" data-decimals="1">0,8</span><span class="stat-unit">s</span></dd>
-          </div>
-          <div class="stat" data-reveal data-anchor>
-            <dt>de disponibilidad</dt>
-            <dd><span class="stat-num" data-count="99.9" data-decimals="1">99,9</span><span class="stat-unit">%</span></dd>
-          </div>
-        </dl>
-        <div class="perks-slot" aria-hidden="true"></div>
+            <div class="stat" data-reveal>
+              <dt>de carga</dt>
+              <dd><span class="stat-num" data-count="0.8" data-decimals="1">0,8</span><span class="stat-unit">s</span></dd>
+            </div>
+            <div class="stat" data-reveal>
+              <dt>de disponibilidad</dt>
+              <dd><span class="stat-num" data-count="99.9" data-decimals="1">99,9</span><span class="stat-unit">%</span></dd>
+            </div>
+          </dl>
         </div>
         <ul class="perks-list" data-reveal-group>
           <li><span class="perk-n" aria-hidden="true">01</span><h3>Diseño a medida</h3><p>Sin plantillas: cada web parte de tu negocio.</p></li>
@@ -275,28 +347,33 @@
       </div>
     </section>
 
-    <!-- ============ SOBRE MÍ ============ -->
-    <section class="section about" id="sobre-mi" aria-labelledby="about-title" data-thread="about">
+    <!-- ============ SOBRE MÍ · la pieza se aparta, pequeña y casi quieta ============ -->
+    <section class="section about" id="sobre-mi" aria-labelledby="about-title">
       <div class="container about-grid">
-        <header class="section-head">
+        <header class="section-head side-head">
           <p class="kicker" data-reveal>Sobre mí</p>
-          <h2 class="title" id="about-title" data-split>Hola, soy <em>Ruben</em></h2>
-          <div class="about-slot" aria-hidden="true"></div>
+          <div class="side-title">
+            <h2 class="title" id="about-title" data-split>Hola, soy <em>Ruben</em></h2>
+            <div class="slot mini-slot" data-slot="about" aria-hidden="true"></div>
+          </div>
         </header>
         <div class="about-text">
           <p class="about-lead" data-words>Soy programador y diseño webs para negocios. Me gusta crear webs que, además de verse bien, funcionen: que carguen rápido, que se entiendan y que consigan clientes.</p>
           <p class="about-body" data-reveal>Con rgdevstudio trabajo directamente con cada cliente, sin intermediarios. Hablas conmigo desde el primer día hasta el lanzamiento.</p>
-          <p class="about-sign" data-reveal data-anchor>Ruben · rgdevstudio</p>
+          <p class="about-sign" data-reveal>Ruben · rgdevstudio</p>
         </div>
       </div>
     </section>
 
     <!-- ============ FAQ ============ -->
-    <section class="section faq" id="faq" aria-labelledby="faq-title" data-thread="faq">
+    <section class="section faq" id="faq" aria-labelledby="faq-title">
       <div class="container faq-grid">
-        <header class="section-head">
+        <header class="section-head side-head">
           <p class="kicker" data-reveal>Preguntas</p>
-          <h2 class="title" id="faq-title" data-split>Preguntas <em>frecuentes</em></h2>
+          <div class="side-title">
+            <h2 class="title" id="faq-title" data-split>Preguntas <em>frecuentes</em></h2>
+            <div class="slot mini-slot" data-slot="faq" aria-hidden="true"></div>
+          </div>
         </header>
         <div class="faq-list" data-reveal-group>
           <details class="faq-item" name="faq"><summary><span>¿Cuánto cuesta una web?</span><i aria-hidden="true"></i></summary><div class="faq-answer"><p>Depende de lo que necesites. La landing empieza en 300 € y el mantenimiento cuesta 30 € al mes. La tienda online depende de tu catálogo. En todos los casos te doy un presupuesto cerrado antes de empezar.</p></div></details>
@@ -308,16 +385,16 @@
       </div>
     </section>
 
-    <!-- ============ CONTACTO · fase 5: lanzamiento ============ -->
+    <!-- ============ CONTACTO · las capas se juntan y la web se publica ============ -->
     <section class="contact" id="contacto" aria-labelledby="contact-title">
-      <div class="contact-panel" data-thread="contact">
+      <div class="contact-panel">
         <div class="container contact-grid">
           <div class="contact-intro">
             <p class="kicker" data-reveal>Contacto</p>
             <h2 class="title" id="contact-title" data-split>¿Hablamos de tu <em>proyecto</em>?</h2>
             <p class="lead" data-reveal>Cuéntame qué necesitas y te respondo en menos de 24 horas.</p>
             <p class="contact-mail" data-reveal>O directamente a <a href="mailto:rubeng.seo@gmail.com">rubeng.seo@gmail.com</a></p>
-            <div class="contact-slot lienzo-slot" data-slot="launch" aria-hidden="true"></div>
+            <div class="slot contact-slot" data-slot="contact" aria-hidden="true"></div>
           </div>
 
           <!-- FORMULARIO: pega tu clave de Web3Forms en el campo access_key (ver README) -->
@@ -327,7 +404,7 @@
             <input type="hidden" name="from_name" value="Web rgdevstudio">
             <p class="hp" aria-hidden="true"><label>No rellenes esto: <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off"></label></p>
             <div class="form-row">
-              <div class="field" data-anchor>
+              <div class="field">
                 <label for="f-nombre">Nombre</label>
                 <input id="f-nombre" name="nombre" type="text" autocomplete="name" required aria-describedby="e-nombre">
                 <p class="field-error" id="e-nombre" role="alert"></p>
@@ -337,7 +414,7 @@
                 <input id="f-negocio" name="negocio" type="text" autocomplete="organization">
               </div>
             </div>
-            <fieldset class="choices" data-anchor>
+            <fieldset class="choices">
               <legend>¿Qué necesitas?</legend>
               <div class="choices-row">
                 <label class="choice"><input type="radio" name="proyecto" value="Landing"><span>Landing</span></label>
@@ -345,17 +422,17 @@
                 <label class="choice"><input type="radio" name="proyecto" value="Otro"><span>Otro</span></label>
               </div>
             </fieldset>
-            <div class="field" data-anchor>
+            <div class="field">
               <label for="f-contacto">Email o teléfono</label>
               <input id="f-contacto" name="contacto" type="text" inputmode="email" autocomplete="email" required aria-describedby="e-contacto">
               <p class="field-error" id="e-contacto" role="alert"></p>
             </div>
-            <div class="field" data-anchor>
+            <div class="field">
               <label for="f-mensaje">Cuéntame un poco más <span class="opt">(opcional)</span></label>
               <textarea id="f-mensaje" name="mensaje" rows="3"></textarea>
             </div>
             <div class="form-actions">
-              <button class="btn btn--accent btn--submit" type="submit" data-magnetic data-anchor><span class="submit-label">Enviar</span></button>
+              <button class="btn btn--accent btn--submit" type="submit" data-magnetic><span class="submit-label">Enviar</span></button>
               <a class="btn btn--line-light" href="mailto:rubeng.seo@gmail.com">Escríbeme un email</a>
             </div>
             <p class="form-status" role="status" aria-live="polite"></p>
@@ -365,7 +442,7 @@
         <footer class="site-footer">
           <div class="container">
             <div class="footer-brand">
-              <div class="footer-mark lienzo-slot" data-slot="logo" aria-hidden="true"></div>
+              <div class="slot footer-mark" data-slot="footer" aria-hidden="true"><svg class="footer-logo" viewBox="0 0 125.8 83.8" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M57.5 49.0 L57.5 49.4 L86.6 82.8 L91.8 83.6 L97.5 83.7 L102.5 83.1 L107.0 82.0 L111.7 80.2 L117.1 77.3 L122.6 73.3 L125.7 70.3 L125.7 39.5 L92.8 39.5 L92.9 49.8 L115.1 49.9 L115.2 65.7 L111.2 68.8 L107.6 70.7 L103.2 72.3 L98.8 73.2 L96.6 73.4 L92.6 73.3 L89.2 72.7 L86.3 71.8 L83.0 70.3 L79.8 68.3 L77.8 66.7 L75.3 64.2 L71.7 59.2 L69.3 53.7 L68.0 48.5 L67.6 45.3 L67.5 41.7 L64.6 44.6 L62.2 46.5 L59.6 48.1ZM123.6 15.5 L120.7 11.8 L117.2 8.4 L112.7 5.1 L107.4 2.4 L102.2 0.8 L97.6 0.1 L92.4 0.0 L87.1 0.7 L82.2 2.1 L77.5 4.2 L73.6 6.6 L69.5 9.8 L65.8 13.8 L63.0 18.0 L60.8 22.6 L58.3 29.4 L57.2 31.3 L54.6 34.0 L52.1 35.5 L48.6 36.4 L10.6 36.4 L10.5 13.5 L10.7 12.6 L49.0 12.7 L51.9 13.6 L53.8 14.7 L55.9 16.6 L57.6 19.3 L57.8 19.3 L60.1 14.6 L63.7 9.8 L60.8 7.0 L57.3 4.7 L53.4 3.1 L49.4 2.3 L0.1 2.2 L0.1 83.1 L10.5 83.1 L10.5 47.1 L10.7 46.9 L35.7 46.9 L67.4 83.1 L80.8 83.1 L49.7 46.9 L53.0 46.2 L56.4 44.9 L59.4 43.2 L62.2 41.0 L64.3 38.8 L66.6 35.5 L68.0 32.7 L70.5 25.9 L71.9 23.3 L74.0 20.3 L76.5 17.6 L78.5 15.9 L81.3 14.0 L84.4 12.4 L89.4 10.8 L93.1 10.3 L96.8 10.4 L101.3 11.3 L105.3 12.9 L110.1 16.0 L113.0 18.7 L115.8 22.4 L116.1 22.4Z"/></svg></div>
               <p class="footer-word" aria-hidden="true"><span class="fw">rg<span>dev</span>studio</span></p>
             </div>
             <div class="footer-row">

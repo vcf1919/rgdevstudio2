@@ -24,17 +24,21 @@
   <link rel="preload" href="/fonts/lora-roman.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/newsreader-italic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/archivo-sans.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/styles.css?v=10">
+  <link rel="stylesheet" href="/css/styles.css?v=20">
 
   <script>
-    /* Antes del primer pintado: hay JS y se decide el modo de animación (evita saltos de maquetación).
-       "is-cine": escritorio con el lienzo fijo y la línea completa. Si el JS no arranca en 4 s, se muestra todo. */
+    /* Antes del primer pintado se decide el modo (evita saltos de maquetación):
+       is-wide  escritorio con ratón (≥1024×600): composiciones en dos columnas
+       is-pin   is-wide y con movimiento: Trabajos y Proceso se fijan mientras pasan las escenas
+       is-reduced  prefers-reduced-motion. Si el JS no arranca en 4 s, se muestra todo. */
     (function () {
       var d = document.documentElement, m = function (q) { return window.matchMedia(q).matches; };
       d.classList.add('js');
-      if (m('(prefers-reduced-motion: reduce)')) d.classList.add('is-reduced');
-      else if (m('(min-width: 1024px) and (min-height: 600px)')) d.classList.add('is-cine');
-      setTimeout(function () { if (!window.__rgReady) d.classList.remove('js', 'is-cine'); }, 4000);
+      var red = m('(prefers-reduced-motion: reduce)');
+      if (red) d.classList.add('is-reduced');
+      if (m('(min-width: 1024px) and (min-height: 600px) and (hover: hover) and (pointer: fine)')) d.classList.add('is-wide');
+      if (d.classList.contains('is-wide') && !red) d.classList.add('is-pin');
+      setTimeout(function () { if (!window.__rgReady) d.classList.remove('js', 'is-pin'); }, 4000);
     })();
   </script>
 
@@ -56,14 +60,10 @@
   <script src="/vendor/gsap.min.js" defer></script>
   <script src="/vendor/ScrollTrigger.min.js" defer></script>
   <script src="/vendor/lenis.min.js" defer></script>
-  <script src="/js/lienzo.js?v=10" defer></script>
-  <script src="/js/main.js?v=10" defer></script>
+  <script src="/js/main.js?v=20" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
-
-  <!-- El lienzo fijo de escritorio (lo monta el JS). Es decorativo: todo su contenido está también en el texto. -->
-  <div class="lienzo-stage" aria-hidden="true"></div>
 
   <header class="site-header">
     <div class="header-inner">
@@ -104,8 +104,8 @@
 
   <main id="contenido">
 
-    <!-- ============ HERO · fase 1: boceto ============ -->
-    <section class="hero" id="inicio" aria-labelledby="hero-title" data-thread="hero">
+    <!-- ============ HERO · las partículas forman el RG ============ -->
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
       <div class="container hero-grid">
         <div class="hero-text">
           <p class="kicker hero-kicker" data-hero-fade>Diseño web para negocios locales</p>
@@ -116,104 +116,97 @@
             <a class="btn btn--line" href="#trabajos" data-magnetic>Ver trabajos</a>
           </div>
         </div>
-        <div class="hero-slot lienzo-slot" data-slot="hero" aria-hidden="true"></div>
+        <div class="pslot hero-slot" aria-hidden="true"><svg class="sym"><use href="#s-rg"/></svg></div>
       </div>
     </section>
 
-    <!-- ============ Transición · fase 2: wireframe (anticipa los pasos 1 y 2 del proceso) ============ -->
-    <div class="build" aria-hidden="true" data-thread="build">
-      <div class="build-pin">
-        <p class="build-note build-note--1"><span>1</span> Hablamos</p>
-        <p class="build-note build-note--2"><span>2</span> Te propongo</p>
-        <div class="build-slot"></div>
-      </div>
-    </div>
-
-    <!-- ============ TRABAJOS · fase 3: diseño ============ -->
+    <!-- ============ TRABAJOS · ventana de navegador con la paleta de cada proyecto ============ -->
     <section class="works" id="trabajos" aria-labelledby="works-title">
-      <div class="works-pin" data-thread="works">
+      <div class="works-pin">
         <div class="container works-grid">
-          <div class="works-col">
-            <header class="works-head">
-              <p class="kicker" data-reveal>Trabajos</p>
-              <h2 class="title" id="works-title" data-split>Algunos <em>proyectos</em></h2>
-              <p class="lead" data-reveal>Cada negocio es distinto, y cada web también.</p>
-            </header>
+          <header class="works-head">
+            <p class="kicker" data-reveal>Trabajos</p>
+            <h2 class="title" id="works-title" data-split>Algunos <em>proyectos</em></h2>
+            <p class="lead" data-reveal>Cada negocio es distinto, y cada web también.</p>
+          </header>
 
-            <div class="projects">
-              <article class="project" data-project="argila">
-                <div class="project-text">
-                  <p class="project-num" data-p>01 / 03</p>
-                  <h3 class="project-name" data-p>Taller Argila</h3>
-                  <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Cerámica</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Un taller de cerámica artesanal que vende en ferias y por mensajes. Cada pieza es única y el stock cambia cada semana, así que tener una tienda al día parecía imposible.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify pensada para piezas únicas: fotos de detalle, medidas claras y aviso cuando una pieza se agota. Subir una pieza nueva desde el móvil lleva un minuto.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una tienda online puede tener el carácter del taller sin perder sencillez.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="argila" aria-hidden="true"></div>
-              </article>
+          <div class="projects">
+            <article class="project is-current" data-project="argila">
+              <div class="project-text">
+                <p class="project-num" data-p>01 / 03</p>
+                <h3 class="project-name" data-p>Taller Argila</h3>
+                <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Cerámica</span></p>
+                <dl class="project-case">
+                  <div data-p><dt>El reto</dt><dd>Un taller de cerámica artesanal que vende en ferias y por mensajes. Cada pieza es única y el stock cambia cada semana, así que tener una tienda al día parecía imposible.</dd></div>
+                  <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify pensada para piezas únicas: fotos de detalle, medidas claras y aviso cuando una pieza se agota. Subir una pieza nueva desde el móvil lleva un minuto.</dd></div>
+                  <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una tienda online puede tener el carácter del taller sin perder sencillez.</dd></div>
+                </dl>
+              </div>
+              <div class="pslot project-visual" data-pal="argila" aria-hidden="true"><svg class="sym"><use href="#s-web-argila"/></svg></div>
+            </article>
 
-              <article class="project" data-project="cafe">
-                <div class="project-text">
-                  <p class="project-num" data-p>02 / 03</p>
-                  <h3 class="project-name" data-p>Molí Café</h3>
-                  <p class="project-tags" data-p><span>Landing</span><span class="tag-concept">Concepto</span><span>Cafetería</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Una cafetería de barrio que se llena por recomendación pero casi no aparece en Google. La gente busca horario, carta y cómo llegar, y no lo encuentra.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una landing de una sola página: carta visible sin PDFs, horario y mapa a un toque y botón para reservar mesa por WhatsApp. Pensada para leerse en el móvil, de pie en la calle.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una web sencilla responde en segundos a lo que un cliente busca antes de entrar.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="cafe" aria-hidden="true"></div>
-              </article>
+            <article class="project" data-project="cafe">
+              <div class="project-text">
+                <p class="project-num" data-p>02 / 03</p>
+                <h3 class="project-name" data-p>Molí Café</h3>
+                <p class="project-tags" data-p><span>Landing</span><span class="tag-concept">Concepto</span><span>Cafetería</span></p>
+                <dl class="project-case">
+                  <div data-p><dt>El reto</dt><dd>Una cafetería de barrio que se llena por recomendación pero casi no aparece en Google. La gente busca horario, carta y cómo llegar, y no lo encuentra.</dd></div>
+                  <div data-p><dt>Lo que hice</dt><dd>Una landing de una sola página: carta visible sin PDFs, horario y mapa a un toque y botón para reservar mesa por WhatsApp. Pensada para leerse en el móvil, de pie en la calle.</dd></div>
+                  <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Muestra cómo una web sencilla responde en segundos a lo que un cliente busca antes de entrar.</dd></div>
+                </dl>
+              </div>
+              <div class="pslot project-visual" data-pal="cafe" aria-hidden="true"><svg class="sym"><use href="#s-web-cafe"/></svg></div>
+            </article>
 
-              <article class="project" data-project="moda">
-                <div class="project-text">
-                  <p class="project-num" data-p>03 / 03</p>
-                  <h3 class="project-name" data-p>Atelier Nou</h3>
-                  <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Moda</span></p>
-                  <dl class="project-case">
-                    <div data-p><dt>El reto</dt><dd>Una tienda de moda local que vende por Instagram y gestiona los pedidos a mano, mensaje a mensaje.</dd></div>
-                    <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify con estética editorial: fotos grandes, tallas y stock claros y un pago sencillo. Los pedidos llegan ordenados y se cobran al momento.</dd></div>
-                    <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Explora cómo llevar la identidad de una tienda física a internet sin que parezca una plantilla.</dd></div>
-                  </dl>
-                </div>
-                <div class="project-visual lienzo-slot" data-slot="moda" aria-hidden="true"></div>
-              </article>
-            </div>
+            <article class="project" data-project="moda">
+              <div class="project-text">
+                <p class="project-num" data-p>03 / 03</p>
+                <h3 class="project-name" data-p>Atelier Nou</h3>
+                <p class="project-tags" data-p><span>Tienda online</span><span class="tag-concept">Concepto</span><span>Moda</span></p>
+                <dl class="project-case">
+                  <div data-p><dt>El reto</dt><dd>Una tienda de moda local que vende por Instagram y gestiona los pedidos a mano, mensaje a mensaje.</dd></div>
+                  <div data-p><dt>Lo que hice</dt><dd>Una tienda en Shopify con estética editorial: fotos grandes, tallas y stock claros y un pago sencillo. Los pedidos llegan ordenados y se cobran al momento.</dd></div>
+                  <div data-p><dt>El resultado</dt><dd>Concepto de diseño. Explora cómo llevar la identidad de una tienda física a internet sin que parezca una plantilla.</dd></div>
+                </dl>
+              </div>
+              <div class="pslot project-visual" data-pal="moda" aria-hidden="true"><svg class="sym"><use href="#s-web-moda"/></svg></div>
+            </article>
           </div>
-          <div class="works-slot" aria-hidden="true">
-            <ol class="works-dots"><li></li><li></li><li></li></ol>
-          </div>
+          <ol class="works-dots" aria-hidden="true"><li></li><li></li><li></li></ol>
         </div>
       </div>
     </section>
 
-    <!-- ============ SERVICIOS · fase 4: interactivo ============ -->
-    <section class="section services" id="servicios" aria-labelledby="services-title" data-thread="services">
+    <!-- ============ SERVICIOS · página alargada, móvil con productos y escudo ============ -->
+    <section class="section services" id="servicios" aria-labelledby="services-title">
       <div class="container services-layout">
         <header class="section-head">
           <p class="kicker" data-reveal>Servicios</p>
           <h2 class="title" id="services-title" data-split>¿Qué <em>necesitas</em>?</h2>
         </header>
         <div class="services-grid">
-          <article class="service" data-anchor>
+          <div class="pslot svc-slot" aria-hidden="true"></div>
+          <article class="service">
+            <svg class="sym pf-ico" aria-hidden="true"><use href="#s-landing"/></svg>
             <p class="service-time">1–2 semanas</p>
             <h3 class="service-name">Landing</h3>
             <p class="service-desc">Una página clara y bonita para presentar tu negocio y que te contacten. Ideal si empiezas o si tu web actual no te trae clientes.</p>
             <p class="service-price"><small>Desde</small> 300 €</p>
             <a class="service-link" href="#contacto" data-service="Landing"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
           </article>
-          <article class="service service--feature" data-anchor>
+          <div class="pslot svc-slot" aria-hidden="true"></div>
+          <article class="service service--feature">
+            <svg class="sym pf-ico" aria-hidden="true"><use href="#s-tienda"/></svg>
             <p class="service-time">3–5 semanas</p>
             <h3 class="service-name">Tienda online</h3>
             <p class="service-desc">Vende tus productos por internet con una tienda en Shopify diseñada a medida. Te la dejo lista para vender y te enseño a gestionarla tú solo.</p>
             <p class="service-price">A medida <small>· presupuesto cerrado</small></p>
             <a class="service-link" href="#contacto" data-service="Tienda"><span>Pedir presupuesto</span> <i aria-hidden="true">→</i></a>
           </article>
-          <article class="service" data-anchor>
+          <div class="pslot svc-slot" aria-hidden="true"></div>
+          <article class="service">
+            <svg class="sym pf-ico" aria-hidden="true"><use href="#s-shield"/></svg>
             <p class="service-time">Cada mes</p>
             <h3 class="service-name">Mantenimiento</h3>
             <p class="service-desc">Me encargo de que tu web siga funcionando, actualizada y segura. Si necesitas un cambio, me escribes y listo.</p>
@@ -221,33 +214,33 @@
             <a class="service-link" href="#contacto" data-service="Otro"><span>Preguntar</span> <i aria-hidden="true">→</i></a>
           </article>
         </div>
-        <div class="services-aside" aria-hidden="true"><div class="services-slot"></div></div>
+        <div class="services-aside" aria-hidden="true"><div class="pslot services-slot"></div></div>
       </div>
     </section>
 
-    <!-- ============ PROCESO · replay de las fases ============ -->
+    <!-- ============ PROCESO · bocadillo, documento, navegador y cohete ============ -->
     <section class="section process" id="proceso" aria-labelledby="process-title">
-      <div class="process-pin" data-thread="process">
+      <div class="process-pin">
         <div class="container process-layout">
           <div class="process-side">
             <header class="section-head">
               <p class="kicker" data-reveal>Proceso</p>
               <h2 class="title" id="process-title" data-split>Así <em>trabajamos</em></h2>
             </header>
-            <div class="process-slot" aria-hidden="true"></div>
+            <div class="pslot process-slot" aria-hidden="true"></div>
           </div>
           <ol class="steps">
-            <li class="step"><span class="step-num">1</span><div><h3>Hablamos</h3><p>Me cuentas tu negocio y qué necesitas. Sin compromiso.</p></div></li>
-            <li class="step"><span class="step-num">2</span><div><h3>Te propongo</h3><p>Recibes un presupuesto claro, con plazos y lo que incluye.</p></div></li>
-            <li class="step"><span class="step-num">3</span><div><h3>Diseño y desarrollo</h3><p>Te enseño avances para que opines antes de seguir.</p></div></li>
-            <li class="step"><span class="step-num">4</span><div><h3>Lanzamos</h3><p>Publicamos la web y te explico cómo usarla.</p></div></li>
+            <li class="step"><span class="step-num">1</span><div><h3>Hablamos</h3><p>Me cuentas tu negocio y qué necesitas. Sin compromiso.</p></div><svg class="sym pf-ico" aria-hidden="true"><use href="#s-bubble"/></svg><div class="pslot step-slot" aria-hidden="true"></div></li>
+            <li class="step"><span class="step-num">2</span><div><h3>Te propongo</h3><p>Recibes un presupuesto claro, con plazos y lo que incluye.</p></div><svg class="sym pf-ico" aria-hidden="true"><use href="#s-doc"/></svg><div class="pslot step-slot" aria-hidden="true"></div></li>
+            <li class="step"><span class="step-num">3</span><div><h3>Diseño y desarrollo</h3><p>Te enseño avances para que opines antes de seguir.</p></div><svg class="sym pf-ico" aria-hidden="true"><use href="#s-browser"/></svg><div class="pslot step-slot" aria-hidden="true"></div></li>
+            <li class="step"><span class="step-num">4</span><div><h3>Lanzamos</h3><p>Publicamos la web y te explico cómo usarla.</p></div><svg class="sym pf-ico" aria-hidden="true"><use href="#s-rocket"/></svg><div class="pslot step-slot" aria-hidden="true"></div></li>
           </ol>
         </div>
       </div>
     </section>
 
-    <!-- ============ VENTAJAS ============ -->
-    <section class="section perks" id="ventajas" aria-labelledby="perks-title" data-thread="perks">
+    <!-- ============ VENTAJAS · «0,8» y «99,9 %» en partículas ============ -->
+    <section class="section perks" id="ventajas" aria-labelledby="perks-title">
       <div class="container">
         <header class="section-head">
           <p class="kicker" data-reveal>Ventajas</p>
@@ -255,16 +248,16 @@
         </header>
         <div class="stats-row">
           <dl class="stats">
-          <div class="stat" data-reveal data-anchor>
-            <dt>de carga</dt>
-            <dd><span class="stat-num" data-count="0.8" data-decimals="1">0,8</span><span class="stat-unit">s</span></dd>
-          </div>
-          <div class="stat" data-reveal data-anchor>
-            <dt>de disponibilidad</dt>
-            <dd><span class="stat-num" data-count="99.9" data-decimals="1">99,9</span><span class="stat-unit">%</span></dd>
-          </div>
-        </dl>
-        <div class="perks-slot" aria-hidden="true"></div>
+            <div class="stat" data-reveal>
+              <dt>de carga</dt>
+              <dd><span class="stat-num" data-count="0.8" data-decimals="1">0,8</span><span class="stat-unit">s</span></dd>
+            </div>
+            <div class="stat" data-reveal>
+              <dt>de disponibilidad</dt>
+              <dd><span class="stat-num" data-count="99.9" data-decimals="1">99,9</span><span class="stat-unit">%</span></dd>
+            </div>
+          </dl>
+          <div class="pslot perks-slot" aria-hidden="true"></div>
         </div>
         <ul class="perks-list" data-reveal-group>
           <li><span class="perk-n" aria-hidden="true">01</span><h3>Diseño a medida</h3><p>Sin plantillas: cada web parte de tu negocio.</p></li>
@@ -275,24 +268,23 @@
       </div>
     </section>
 
-    <!-- ============ SOBRE MÍ ============ -->
-    <section class="section about" id="sobre-mi" aria-labelledby="about-title" data-thread="about">
+    <!-- ============ SOBRE MÍ · nube tranquila de fondo ============ -->
+    <section class="section about" id="sobre-mi" aria-labelledby="about-title">
       <div class="container about-grid">
         <header class="section-head">
           <p class="kicker" data-reveal>Sobre mí</p>
           <h2 class="title" id="about-title" data-split>Hola, soy <em>Ruben</em></h2>
-          <div class="about-slot" aria-hidden="true"></div>
         </header>
         <div class="about-text">
           <p class="about-lead" data-words>Soy programador y diseño webs para negocios. Me gusta crear webs que, además de verse bien, funcionen: que carguen rápido, que se entiendan y que consigan clientes.</p>
           <p class="about-body" data-reveal>Con rgdevstudio trabajo directamente con cada cliente, sin intermediarios. Hablas conmigo desde el primer día hasta el lanzamiento.</p>
-          <p class="about-sign" data-reveal data-anchor>Ruben · rgdevstudio</p>
+          <p class="about-sign" data-reveal>Ruben · rgdevstudio</p>
         </div>
       </div>
     </section>
 
     <!-- ============ FAQ ============ -->
-    <section class="section faq" id="faq" aria-labelledby="faq-title" data-thread="faq">
+    <section class="section faq" id="faq" aria-labelledby="faq-title">
       <div class="container faq-grid">
         <header class="section-head">
           <p class="kicker" data-reveal>Preguntas</p>
@@ -308,16 +300,16 @@
       </div>
     </section>
 
-    <!-- ============ CONTACTO · fase 5: lanzamiento ============ -->
+    <!-- ============ CONTACTO · bolsa de compra y estallido al llegar a «Enviar» ============ -->
     <section class="contact" id="contacto" aria-labelledby="contact-title">
-      <div class="contact-panel" data-thread="contact">
+      <div class="contact-panel">
         <div class="container contact-grid">
           <div class="contact-intro">
             <p class="kicker" data-reveal>Contacto</p>
             <h2 class="title" id="contact-title" data-split>¿Hablamos de tu <em>proyecto</em>?</h2>
             <p class="lead" data-reveal>Cuéntame qué necesitas y te respondo en menos de 24 horas.</p>
             <p class="contact-mail" data-reveal>O directamente a <a href="mailto:rubeng.seo@gmail.com">rubeng.seo@gmail.com</a></p>
-            <div class="contact-slot lienzo-slot" data-slot="launch" aria-hidden="true"></div>
+            <div class="pslot contact-slot" aria-hidden="true"><svg class="sym"><use href="#s-bag"/></svg></div>
           </div>
 
           <!-- FORMULARIO: pega tu clave de Web3Forms en el campo access_key (ver README) -->
@@ -327,7 +319,7 @@
             <input type="hidden" name="from_name" value="Web rgdevstudio">
             <p class="hp" aria-hidden="true"><label>No rellenes esto: <input type="checkbox" name="botcheck" tabindex="-1" autocomplete="off"></label></p>
             <div class="form-row">
-              <div class="field" data-anchor>
+              <div class="field">
                 <label for="f-nombre">Nombre</label>
                 <input id="f-nombre" name="nombre" type="text" autocomplete="name" required aria-describedby="e-nombre">
                 <p class="field-error" id="e-nombre" role="alert"></p>
@@ -337,7 +329,7 @@
                 <input id="f-negocio" name="negocio" type="text" autocomplete="organization">
               </div>
             </div>
-            <fieldset class="choices" data-anchor>
+            <fieldset class="choices">
               <legend>¿Qué necesitas?</legend>
               <div class="choices-row">
                 <label class="choice"><input type="radio" name="proyecto" value="Landing"><span>Landing</span></label>
@@ -345,18 +337,18 @@
                 <label class="choice"><input type="radio" name="proyecto" value="Otro"><span>Otro</span></label>
               </div>
             </fieldset>
-            <div class="field" data-anchor>
+            <div class="field">
               <label for="f-contacto">Email o teléfono</label>
               <input id="f-contacto" name="contacto" type="text" inputmode="email" autocomplete="email" required aria-describedby="e-contacto">
               <p class="field-error" id="e-contacto" role="alert"></p>
             </div>
-            <div class="field" data-anchor>
+            <div class="field">
               <label for="f-mensaje">Cuéntame un poco más <span class="opt">(opcional)</span></label>
               <textarea id="f-mensaje" name="mensaje" rows="3"></textarea>
             </div>
             <div class="form-actions">
-              <button class="btn btn--accent btn--submit" type="submit" data-magnetic data-anchor><span class="submit-label">Enviar</span></button>
-              <a class="btn btn--line-light" href="mailto:rubeng.seo@gmail.com">Escríbeme un email</a>
+              <button class="btn btn--accent btn--submit" type="submit" data-magnetic><span class="submit-label">Enviar</span></button>
+              <a class="btn btn--line" href="mailto:rubeng.seo@gmail.com">Escríbeme un email</a>
             </div>
             <p class="form-status" role="status" aria-live="polite"></p>
           </form>
@@ -365,7 +357,7 @@
         <footer class="site-footer">
           <div class="container">
             <div class="footer-brand">
-              <div class="footer-mark lienzo-slot" data-slot="logo" aria-hidden="true"></div>
+              <div class="pslot footer-mark" aria-hidden="true"><svg class="sym"><use href="#s-rg"/></svg></div>
               <p class="footer-word" aria-hidden="true"><span class="fw">rg<span>dev</span>studio</span></p>
             </div>
             <div class="footer-row">
@@ -380,5 +372,8 @@
       </div>
     </section>
   </main>
+
+  <!-- Formas en SVG: versión estática (sin WebGL) y fuente de puntos de las partículas -->
+  <svg class="sprite" aria-hidden="true" focusable="false" width="0" height="0"><defs><pattern id="pdots" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><circle cx="1.7" cy="1.7" r=".8" fill="#F0561D"/></pattern></defs><symbol id="s-rg" viewBox="0 0 125.8 83.8"><path class="f" fill="url(#pdots)" fill-rule="evenodd" d="M57.5 49.0 L57.5 49.4 L86.6 82.8 L91.8 83.6 L97.5 83.7 L102.5 83.1 L107.0 82.0 L111.7 80.2 L117.1 77.3 L122.6 73.3 L125.7 70.3 L125.7 39.5 L92.8 39.5 L92.9 49.8 L115.1 49.9 L115.2 65.7 L111.2 68.8 L107.6 70.7 L103.2 72.3 L98.8 73.2 L96.6 73.4 L92.6 73.3 L89.2 72.7 L86.3 71.8 L83.0 70.3 L79.8 68.3 L77.8 66.7 L75.3 64.2 L71.7 59.2 L69.3 53.7 L68.0 48.5 L67.6 45.3 L67.5 41.7 L64.6 44.6 L62.2 46.5 L59.6 48.1ZM123.6 15.5 L120.7 11.8 L117.2 8.4 L112.7 5.1 L107.4 2.4 L102.2 0.8 L97.6 0.1 L92.4 0.0 L87.1 0.7 L82.2 2.1 L77.5 4.2 L73.6 6.6 L69.5 9.8 L65.8 13.8 L63.0 18.0 L60.8 22.6 L58.3 29.4 L57.2 31.3 L54.6 34.0 L52.1 35.5 L48.6 36.4 L10.6 36.4 L10.5 13.5 L10.7 12.6 L49.0 12.7 L51.9 13.6 L53.8 14.7 L55.9 16.6 L57.6 19.3 L57.8 19.3 L60.1 14.6 L63.7 9.8 L60.8 7.0 L57.3 4.7 L53.4 3.1 L49.4 2.3 L0.1 2.2 L0.1 83.1 L10.5 83.1 L10.5 47.1 L10.7 46.9 L35.7 46.9 L67.4 83.1 L80.8 83.1 L49.7 46.9 L53.0 46.2 L56.4 44.9 L59.4 43.2 L62.2 41.0 L64.3 38.8 L66.6 35.5 L68.0 32.7 L70.5 25.9 L71.9 23.3 L74.0 20.3 L76.5 17.6 L78.5 15.9 L81.3 14.0 L84.4 12.4 L89.4 10.8 L93.1 10.3 L96.8 10.4 L101.3 11.3 L105.3 12.9 L110.1 16.0 L113.0 18.7 L115.8 22.4 L116.1 22.4Z"/></symbol><symbol id="s-web-argila" viewBox="0 0 160 110"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M9 2H151A7 7 0 0 1 158 9V101A7 7 0 0 1 151 108H9A7 7 0 0 1 2 101V9A7 7 0 0 1 9 2Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M2 17H158"/><path class="f" fill="url(#pdots)" d="M9 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM16 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM23 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M51 6.5H109A3 3 0 0 1 112 9.5V9.5A3 3 0 0 1 109 12.5H51A3 3 0 0 1 48 9.5V9.5A3 3 0 0 1 51 6.5Z"/><path class="f" fill="url(#pdots)" d="M12 24h22v4h-22Z"/><path class="f d" fill="url(#pdots)" d="M110 24h10v3h-10ZM124 24h10v3h-10ZM138 24h10v3h-10Z"/><path class="f" fill="url(#pdots)" d="M12 33h62v7h-62ZM12 43h42v7h-42Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M14 58H41A2 2 0 0 1 43 60V88A2 2 0 0 1 41 90H14A2 2 0 0 1 12 88V60A2 2 0 0 1 14 58Z"/><path class="f" fill="url(#pdots)" d="M20 86C18 76 22 70 25 67V63H30V67C33 70 37 76 35 86Z"/><path class="f d" fill="url(#pdots)" d="M12 95h18v3h-18Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M50.5 58H77.5A2 2 0 0 1 79.5 60V88A2 2 0 0 1 77.5 90H50.5A2 2 0 0 1 48.5 88V60A2 2 0 0 1 50.5 58Z"/><path class="f" fill="url(#pdots)" d="M56.5 86C54.5 76 58.5 70 61.5 67V63H66.5V67C69.5 70 73.5 76 71.5 86Z"/><path class="f d" fill="url(#pdots)" d="M48.5 95h18v3h-18Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M87 58H114A2 2 0 0 1 116 60V88A2 2 0 0 1 114 90H87A2 2 0 0 1 85 88V60A2 2 0 0 1 87 58Z"/><path class="f" fill="url(#pdots)" d="M93 86C91 76 95 70 98 67V63H103V67C106 70 110 76 108 86Z"/><path class="f d" fill="url(#pdots)" d="M85 95h18v3h-18Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M123.5 58H150.5A2 2 0 0 1 152.5 60V88A2 2 0 0 1 150.5 90H123.5A2 2 0 0 1 121.5 88V60A2 2 0 0 1 123.5 58Z"/><path class="f" fill="url(#pdots)" d="M129.5 86C127.5 76 131.5 70 134.5 67V63H139.5V67C142.5 70 146.5 76 144.5 86Z"/><path class="f d" fill="url(#pdots)" d="M121.5 95h18v3h-18Z"/></symbol><symbol id="s-web-cafe" viewBox="0 0 160 110"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M9 2H151A7 7 0 0 1 158 9V101A7 7 0 0 1 151 108H9A7 7 0 0 1 2 101V9A7 7 0 0 1 9 2Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M2 17H158"/><path class="f" fill="url(#pdots)" d="M9 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM16 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM23 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M51 6.5H109A3 3 0 0 1 112 9.5V9.5A3 3 0 0 1 109 12.5H51A3 3 0 0 1 48 9.5V9.5A3 3 0 0 1 51 6.5Z"/><path class="f" fill="url(#pdots)" d="M12 26h66v8h-66ZM12 37h46v8h-46Z"/><path class="f d" fill="url(#pdots)" d="M12 52h62v2.4h-62ZM12 58h58v2.4h-58ZM12 64h50v2.4h-50Z"/><path class="f" fill="url(#pdots)" d="M17.5 74H42.5A5.5 5.5 0 0 1 48 79.5V79.5A5.5 5.5 0 0 1 42.5 85H17.5A5.5 5.5 0 0 1 12 79.5V79.5A5.5 5.5 0 0 1 17.5 74Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M96 26H144A4 4 0 0 1 148 30V94A4 4 0 0 1 144 98H96A4 4 0 0 1 92 94V30A4 4 0 0 1 96 26Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M96 88C108 80 104 64 118 60S138 48 144 32"/><path class="f" fill="url(#pdots)" d="M122 66C116 58 112 53 112 48A10 10 0 0 1 132 48C132 53 128 58 122 66Z"/><path class="f d" fill="url(#pdots)" d="M12 93h30v2.6h-30ZM64 93h10v2.6h-10Z"/></symbol><symbol id="s-web-moda" viewBox="0 0 160 110"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M9 2H151A7 7 0 0 1 158 9V101A7 7 0 0 1 151 108H9A7 7 0 0 1 2 101V9A7 7 0 0 1 9 2Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M2 17H158"/><path class="f" fill="url(#pdots)" d="M9 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM16 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM23 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M51 6.5H109A3 3 0 0 1 112 9.5V9.5A3 3 0 0 1 109 12.5H51A3 3 0 0 1 48 9.5V9.5A3 3 0 0 1 51 6.5Z"/><path class="f" fill="url(#pdots)" d="M14 24H84A2 2 0 0 1 86 26V98A2 2 0 0 1 84 100H14A2 2 0 0 1 12 98V26A2 2 0 0 1 14 24Z"/><path class="f" fill="url(#pdots)" d="M96 27h52v9h-52ZM96 40h38v9h-38Z"/><path class="f d" fill="url(#pdots)" d="M96 58h52v2.2h-52ZM96 64h46v2.2h-46ZM96 70h50v2.2h-50Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M98 79H104A2 2 0 0 1 106 81V85A2 2 0 0 1 104 87H98A2 2 0 0 1 96 85V81A2 2 0 0 1 98 79Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M111.5 79H117.5A2 2 0 0 1 119.5 81V85A2 2 0 0 1 117.5 87H111.5A2 2 0 0 1 109.5 85V81A2 2 0 0 1 111.5 79Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M125 79H131A2 2 0 0 1 133 81V85A2 2 0 0 1 131 87H125A2 2 0 0 1 123 85V81A2 2 0 0 1 125 79Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M138.5 79H144.5A2 2 0 0 1 146.5 81V85A2 2 0 0 1 144.5 87H138.5A2 2 0 0 1 136.5 85V81A2 2 0 0 1 138.5 79Z"/><path class="f" fill="url(#pdots)" d="M100 92H144A4 4 0 0 1 148 96V96A4 4 0 0 1 144 100H100A4 4 0 0 1 96 96V96A4 4 0 0 1 100 92Z"/></symbol><symbol id="s-landing" viewBox="0 0 70 140"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M8 2H62A6 6 0 0 1 68 8V132A6 6 0 0 1 62 138H8A6 6 0 0 1 2 132V8A6 6 0 0 1 8 2Z"/><path class="f" fill="url(#pdots)" d="M10 10h18v3h-18Z"/><path class="f d" fill="url(#pdots)" d="M46 10h14v3h-14Z"/><path class="f" fill="url(#pdots)" d="M10 20h42v6h-42ZM10 29h30v6h-30Z"/><path class="f" fill="url(#pdots)" d="M12 42H58A2 2 0 0 1 60 44V68A2 2 0 0 1 58 70H12A2 2 0 0 1 10 68V44A2 2 0 0 1 12 42Z"/><path class="f" fill="url(#pdots)" d="M12.5 82a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0ZM30.5 82a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0ZM48.5 82a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0Z"/><path class="f d" fill="url(#pdots)" d="M10 94h50v2.2h-50ZM10 99.5h42v2.2h-42Z"/><path class="f" fill="url(#pdots)" d="M22.5 108H47.5A4.5 4.5 0 0 1 52 112.5V112.5A4.5 4.5 0 0 1 47.5 117H22.5A4.5 4.5 0 0 1 18 112.5V112.5A4.5 4.5 0 0 1 22.5 108Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M10 127H60"/></symbol><symbol id="s-tienda" viewBox="0 0 76 140"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M15 2H61A13 13 0 0 1 74 15V125A13 13 0 0 1 61 138H15A13 13 0 0 1 2 125V15A13 13 0 0 1 15 2Z"/><path class="f" fill="url(#pdots)" d="M30.5 7H45.5A2.5 2.5 0 0 1 48 9.5V9.5A2.5 2.5 0 0 1 45.5 12H30.5A2.5 2.5 0 0 1 28 9.5V9.5A2.5 2.5 0 0 1 30.5 7Z"/><path class="f" fill="url(#pdots)" d="M10 20h18v3h-18Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M57.5 18H64.5A1.5 1.5 0 0 1 66 19.5V23.5A1.5 1.5 0 0 1 64.5 25H57.5A1.5 1.5 0 0 1 56 23.5V19.5A1.5 1.5 0 0 1 57.5 18Z"/><path class="f" fill="url(#pdots)" d="M13 30H33A3 3 0 0 1 36 33V48A3 3 0 0 1 33 51H13A3 3 0 0 1 10 48V33A3 3 0 0 1 13 30Z"/><path class="f d" fill="url(#pdots)" d="M10 54h14v2h-14Z"/><path class="f" fill="url(#pdots)" d="M43 30H63A3 3 0 0 1 66 33V48A3 3 0 0 1 63 51H43A3 3 0 0 1 40 48V33A3 3 0 0 1 43 30Z"/><path class="f d" fill="url(#pdots)" d="M40 54h14v2h-14Z"/><path class="f" fill="url(#pdots)" d="M13 60H33A3 3 0 0 1 36 63V78A3 3 0 0 1 33 81H13A3 3 0 0 1 10 78V63A3 3 0 0 1 13 60Z"/><path class="f d" fill="url(#pdots)" d="M10 84h14v2h-14Z"/><path class="f" fill="url(#pdots)" d="M43 60H63A3 3 0 0 1 66 63V78A3 3 0 0 1 63 81H43A3 3 0 0 1 40 78V63A3 3 0 0 1 43 60Z"/><path class="f d" fill="url(#pdots)" d="M40 84h14v2h-14Z"/><path class="f" fill="url(#pdots)" d="M13 90H33A3 3 0 0 1 36 93V108A3 3 0 0 1 33 111H13A3 3 0 0 1 10 108V93A3 3 0 0 1 13 90Z"/><path class="f d" fill="url(#pdots)" d="M10 114h14v2h-14Z"/><path class="f" fill="url(#pdots)" d="M43 90H63A3 3 0 0 1 66 93V108A3 3 0 0 1 63 111H43A3 3 0 0 1 40 108V93A3 3 0 0 1 43 90Z"/><path class="f d" fill="url(#pdots)" d="M40 114h14v2h-14Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M14.5 122H61.5A4.5 4.5 0 0 1 66 126.5V126.5A4.5 4.5 0 0 1 61.5 131H14.5A4.5 4.5 0 0 1 10 126.5V126.5A4.5 4.5 0 0 1 14.5 122Z"/></symbol><symbol id="s-shield" viewBox="0 0 100 112"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M50 4L90 18V52C90 78 72 96 50 106C28 96 10 78 10 52V18Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M50 15L80 26V52C80 72 67 86 50 94C33 86 20 72 20 52V26Z"/><path class="s k" fill="none" stroke="#F0561D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 5.4" d="M33 54L45 66L68 40"/></symbol><symbol id="s-bubble" viewBox="0 0 120 96"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M20 8H100A12 12 0 0 1 112 20V56A12 12 0 0 1 100 68H48L28 86L32 68H20A12 12 0 0 1 8 56V20A12 12 0 0 1 20 8Z"/><path class="f" fill="url(#pdots)" d="M34 38a6 6 0 1 0 12 0a6 6 0 1 0 -12 0ZM54 38a6 6 0 1 0 12 0a6 6 0 1 0 -12 0ZM74 38a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z"/></symbol><symbol id="s-doc" viewBox="0 0 92 120"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M8 4H62L84 26V116H8Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M62 4V26H84"/><path class="f" fill="url(#pdots)" d="M18 30h36v5h-36Z"/><path class="f d" fill="url(#pdots)" d="M18 44h56v2.4h-56ZM18 52h56v2.4h-56ZM18 60h48v2.4h-48ZM18 68h52v2.4h-52Z"/><path class="f" fill="url(#pdots)" d="M18 86h22v3h-22ZM54 83h20v7h-20Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M18 104C26 96 30 110 38 102S50 98 56 104"/></symbol><symbol id="s-browser" viewBox="0 0 160 110"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M9 2H151A7 7 0 0 1 158 9V101A7 7 0 0 1 151 108H9A7 7 0 0 1 2 101V9A7 7 0 0 1 9 2Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M2 17H158"/><path class="f" fill="url(#pdots)" d="M9 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM16 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0ZM23 9.5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M51 6.5H109A3 3 0 0 1 112 9.5V9.5A3 3 0 0 1 109 12.5H51A3 3 0 0 1 48 9.5V9.5A3 3 0 0 1 51 6.5Z"/><path class="f d" fill="url(#pdots)" d="M14 26h40v4h-40ZM14 33h26v4h-26Z"/><path class="s k" fill="none" stroke="#F0561D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 5.4" d="M64 48L48 63L64 78"/><path class="s k" fill="none" stroke="#F0561D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 5.4" d="M96 48L112 63L96 78"/><path class="s k" fill="none" stroke="#F0561D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 5.4" d="M86 42L74 84"/><path class="f" fill="url(#pdots)" d="M124 72L124 96L130 90L135 100L139.5 98L134.5 88L142 88Z"/></symbol><symbol id="s-rocket" viewBox="0 0 100 132"><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M50 6C70 22 76 48 72 82H28C24 48 30 22 50 6Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M41 44a9 9 0 1 0 18 0a9 9 0 1 0 -18 0Z"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M28 64L14 86L28 82"/><path class="s" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M72 64L86 86L72 82"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M38 82L42 92H58L62 82"/><path class="f" fill="url(#pdots)" d="M42 97C44 108 48 116 50 126C52 116 56 108 58 97Z"/></symbol><symbol id="s-bag" viewBox="0 0 110 120"><path class="s k" fill="none" stroke="#F0561D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 5.4" d="M38 38V27A17 17 0 0 1 72 27V38"/><path class="f" fill="url(#pdots)" d="M16 38H94L100 114H10Z"/><path class="s d" fill="none" stroke="#F0561D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0 4.2" d="M16 38H94L100 114H10Z"/></symbol></svg>
 </body>
 </html>

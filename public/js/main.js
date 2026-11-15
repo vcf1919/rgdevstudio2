@@ -487,8 +487,8 @@
       onLeaveBack: function () { if (c === cards[0]) setService('', null); }
     });
   });
-  if (!reduced) gsap.from(cards, {
-    autoAlpha: 0, y: CONFIG.services.y, duration: 1, stagger: CONFIG.services.stagger, ease: 'power3.out',
+  if (!reduced) gsap.from(cards, {   // solo opacity: los enlaces siguen siendo accesibles con teclado
+    opacity: 0, y: CONFIG.services.y, duration: 1, stagger: CONFIG.services.stagger, ease: 'power3.out',
     scrollTrigger: { trigger: '.services-grid', start: 'top 85%', once: true }
   });
 
@@ -604,7 +604,7 @@
     var lead = $('[data-words]');
     if (lead) {
       lead.innerHTML = lead.textContent.trim().split(/\s+/).map(function (w) { return '<span class="word">' + w + '</span>'; }).join(' ');
-      gsap.fromTo($$('.word', lead), { opacity: 0.16 }, { opacity: 1, stagger: 0.05, ease: 'none', scrollTrigger: { trigger: lead, start: 'top 80%', end: 'bottom 55%', scrub: 0.4 } });
+      gsap.fromTo($$('.word', lead), { opacity: 0.5 }, { opacity: 1, stagger: 0.05, ease: 'none', scrollTrigger: { trigger: lead, start: 'top 80%', end: 'bottom 55%', scrub: 0.4 } });
     }
     /* Pie: «rgdevstudio» gigante que se revela */
     gsap.fromTo('.footer-word .fw', { yPercent: 102 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: '.site-footer', start: 'top bottom', end: 'bottom bottom', scrub: 0.5 } });

@@ -325,7 +325,7 @@ html:not(.js) .slot:not(.hero-slot):not(.footer-mark) { display: none; }
 .long { left: 0; right: 0; top: calc(100% - 1.8em); height: 52%; padding: 2.4em 7% 0; border-radius: 0 0 1.8em 1.8em; background: #F8F7F3; transform: scaleY(0); transform-origin: 50% 0; opacity: 0; transition: transform 1s var(--ease-out), opacity .4s; }
 .long i { display: block; height: 22%; margin-bottom: 7%; border-radius: .8em; background: #E7E3DA; }
 .long i:nth-child(2) { width: 70%; height: 9%; }
-.notes { inset: 0; opacity: 0; transition: opacity .6s; }
+.notes { inset: 0; opacity: 0; visibility: hidden; transition: opacity .6s, visibility 0s .6s; }
 .note { position: absolute; font-family: var(--italic); font-style: italic; font-weight: 400; font-size: 1.7em; color: var(--accent-text); white-space: nowrap; }
 .note::before { content: "↘"; margin-right: .2em; font-family: var(--sans); font-style: normal; font-size: .8em; }
 .n1 { left: 30%; top: 3.6%; rotate: -4deg; } .n2 { left: 18%; top: 24%; rotate: 3deg; } .n3 { left: 30%; top: 63%; rotate: -3deg; }
@@ -435,14 +435,15 @@ html:not(.js) .slot:not(.hero-slot):not(.footer-mark) { display: none; }
 
 /* ---------- Estados (data-* en .pz, los pone el JS según la escena) ---------- */
 /* Variantes de contenido: v0 marca · v1 Argila · v2 Molí · v3 Atelier. Cambian capa a capa. */
-.var { opacity: 0; transition: opacity .6s var(--ease-io) var(--d, 0s); }
+/* Las variantes ocultas no se pintan (visibility): el primer pintado es más ligero y el LCP no lo nota */
+.var { opacity: 0; visibility: hidden; transition: opacity .6s var(--ease-io) var(--d, 0s), visibility 0s linear calc(.6s + var(--d, 0s)); }
 .ly--bg { --d: 0s; } .ly--img { --d: var(--pz-swap); } .ly--txt { --d: calc(var(--pz-swap) * 2); } .ly--ui { --d: calc(var(--pz-swap) * 3); }
 .pz[data-v="0"] .var:nth-of-type(1), .pz[data-v="1"] .var:nth-of-type(2),
-.pz[data-v="2"] .var:nth-of-type(3), .pz[data-v="3"] .var:nth-of-type(4) { opacity: 1; }
+.pz[data-v="2"] .var:nth-of-type(3), .pz[data-v="3"] .var:nth-of-type(4) { opacity: 1; visibility: visible; transition-delay: var(--d, 0s), 0s; }
 .pz[data-com="0"] .ly--com .lc { opacity: 0; }
 
 /* Proceso: 1 solo fondo y notas · 2 cajas grises · 3 contenido real · 4 todo junto */
-.pz[data-step="1"] .notes, .pz[data-step="2"] .notes { opacity: 1; }
+.pz[data-step="1"] .notes, .pz[data-step="2"] .notes { opacity: 1; visibility: visible; transition-delay: 0s; }
 .pz[data-step="1"] .ly:not(.ly--bg) .lc, .pz[data-step="1"] .ly:not(.ly--bg)::before, .pz[data-step="1"] .ly:not(.ly--bg) .tag { opacity: 0; }
 .pz[data-com="0"] .ly--com::before, .pz[data-com="0"] .ly--com .tag { opacity: 0; }
 /* las sombras de capa las anima el JS (opacity en línea): para capas ocultas se apagan con visibility */
@@ -683,7 +684,10 @@ html:not(.js) .slot:not(.hero-slot):not(.footer-mark) { display: none; }
 .step-num::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: var(--accent); transform: scale(0); transition: transform var(--dur-m) var(--ease-back); }
 .step h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.7rem, 1.3rem + 1.4vw, 2.6rem); line-height: 1.05; letter-spacing: -0.03em; padding-top: 4px; }
 .step p { color: var(--muted); max-width: 32ch; margin-top: 6px; }
-.js:not(.is-reduced) .step > div { opacity: .32; transition: opacity var(--dur-m) var(--ease-out), transform var(--dur-m) var(--ease-out); transform: translateX(-6px); }
+/* Paso inactivo: atenuado con color (no con opacidad) para mantener el contraste AA */
+.js:not(.is-reduced) .step > div { transition: transform var(--dur-m) var(--ease-out); transform: translateX(-6px); }
+.js:not(.is-reduced) .step h3 { color: var(--muted); transition: color var(--dur-m); }
+.js:not(.is-reduced) .step.is-on h3 { color: var(--ink); }
 .step.is-on .step-num::before { transform: scale(1); }
 .js:not(.is-reduced) .step.is-on > div { opacity: 1; transform: none; }
 .is-reduced .step-num::before { transform: scale(1); }
